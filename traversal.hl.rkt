@@ -150,14 +150,14 @@ not expressed syntactically using the @racket[Foo] identifier.
 
 
 @CHUNK[<api>
-       (define-template-metafunction (replace-in-type stx)
+       (define-template-metafunction (!replace-in-type stx)
          (syntax-case stx ()
            [(_ _whole-type [_type-to-replaceᵢ _Tᵢ] …)
             #`(#,(syntax-local-template-metafunction-introduce
                   (fold-τ #'(_whole-type _type-to-replaceᵢ …))) _Tᵢ …)]))]
 
 @CHUNK[<api>
-       (define-template-metafunction (∀-replace-in-type stx)
+       (define-template-metafunction (!∀-replace-in-type stx)
          (syntax-case stx ()
            [(_ _whole-type _type-to-replaceᵢ …)
             (syntax-local-template-metafunction-introduce
@@ -196,7 +196,7 @@ not expressed syntactically using the @racket[Foo] identifier.
                      base))))))]
 
 @CHUNK[<api>
-       (define-template-metafunction (replace-in-instance stx)
+       (define-template-metafunction (!replace-in-instance stx)
          (syntax-case stx ()
            [(_ _whole-type [_type-to-replaceᵢ _predicateᵢ _updateᵢ] …)
             #`(#,(syntax-local-template-metafunction-introduce
@@ -204,7 +204,7 @@ not expressed syntactically using the @racket[Foo] identifier.
                {?@ _predicateᵢ _updateᵢ} …)]))]
          
 @CHUNK[<api>
-       (define-template-metafunction (λ-replace-in-instance stx)
+       (define-template-metafunction (!λ-replace-in-instance stx)
          (syntax-case stx ()
            [(_ _whole-type _type-to-replaceᵢ …)
             (syntax-local-introduce
@@ -234,10 +234,10 @@ not expressed syntactically using the @racket[Foo] identifier.
                           (→ (?@ (→ Any Boolean : _Aᵢ)
                                  (→ _Aᵢ Acc (Values _Bᵢ Acc)))
                              …
-                             (→ (replace-in-type _whole-type
+                             (→ (!replace-in-type _whole-type
                                                  [_type-to-replaceᵢ _Aᵢ] …)
                                 Acc
-                                (Values (replace-in-type _whole-type
+                                (Values (!replace-in-type _whole-type
                                                          [_type-to-replaceᵢ _Bᵢ] …)
                                         Acc))))])]))]
 
@@ -264,74 +264,74 @@ not expressed syntactically using the @racket[Foo] identifier.
 
 @CHUNK[<type-cases>
        [(Pairof X Y)
-        #'(Pairof (replace-in-type X . rec-args)
-                  (replace-in-type Y . rec-args))]]
+        #'(Pairof (!replace-in-type X . rec-args)
+                  (!replace-in-type Y . rec-args))]]
 
 @CHUNK[<f-cases>
        [(Pairof X Y)
         #'(let*-values ([(result-x acc-x)
-                         ((replace-in-instance X . rec-args) (car v) acc)]
+                         ((!replace-in-instance X . rec-args) (car v) acc)]
                         [(result-y acc-y)
-                         ((replace-in-instance Y . rec-args) (cdr v) acc-x)])
+                         ((!replace-in-instance Y . rec-args) (cdr v) acc-x)])
             (values (cons result-x result-y) acc-y))]]
 
 @CHUNK[<type-cases>
        [(Listof X)
-        #'(Listof (replace-in-type X . rec-args))]]
+        #'(Listof (!replace-in-type X . rec-args))]]
 
 @CHUNK[<f-cases>
        [(Listof X)
-        #'(foldl-map (replace-in-instance X . rec-args)
+        #'(foldl-map (!replace-in-instance X . rec-args)
                      acc v)]]
 
 @CHUNK[<type-cases>
        [(Vectorof X)
-        #'(Vectorof (replace-in-type X . rec-args))]]
+        #'(Vectorof (!replace-in-type X . rec-args))]]
 
 @CHUNK[<ftype-cases>
        [(Vectorof X)
         #'(vector->immutable-vector
            (list->vector
-            (foldl-map (replace-in-instance X . rec-args)
+            (foldl-map (!replace-in-instance X . rec-args)
                        acc
                        (vector->list v))))]]
 
 
 @CHUNK[<type-cases>
        [(List X Y …)
-        #'(Pairof (replace-in-type X . rec-args)
-                  (replace-in-type (List Y …) . rec-args))]]
+        #'(Pairof (!replace-in-type X . rec-args)
+                  (!replace-in-type (List Y …) . rec-args))]]
 
 @CHUNK[<f-cases>
        [(List X Y …)
-        #'(let*-values ([(result-x acc-x) ((replace-in-instance X . rec-args)
+        #'(let*-values ([(result-x acc-x) ((!replace-in-instance X . rec-args)
                                            (car v)
                                            acc)]
-                        [(result-y* acc-y*) ((replace-in-instance (List Y …) . rec-args)
+                        [(result-y* acc-y*) ((!replace-in-instance (List Y …) . rec-args)
                                              (cdr v)
                                              acc-x)])
             (values (cons result-x result-y*) acc-y*))]]
 
 @CHUNK[<type-cases>
        [(U _Xⱼ …)
-        #'(U (replace-in-type _Xⱼ . rec-args) …)]]
+        #'(U (!replace-in-type _Xⱼ . rec-args) …)]]
 
 @CHUNK[<f-cases>
        [(U _Xⱼ …)
         #'(dispatch-union v
                           ([_type-to-replaceᵢ Aᵢ _predicateᵢ] …)
-                          [_Xⱼ ((replace-in-instance _Xⱼ . rec-args) v acc)]
+                          [_Xⱼ ((!replace-in-instance _Xⱼ . rec-args) v acc)]
                           …)]]
 
 @CHUNK[<type-cases>
        [(tagged _name [_fieldⱼ (~optional :colon) _Xⱼ] …)
-        #'(tagged _name [_fieldⱼ : (replace-in-type _Xⱼ . rec-args)] …)]]
+        #'(tagged _name [_fieldⱼ : (!replace-in-type _Xⱼ . rec-args)] …)]]
 
 @CHUNK[<f-cases>
        [(tagged _name [_fieldⱼ (~optional :colon) _Xⱼ] …)
         #'(let*-values
               ([(_resultⱼ acc)
-                ((replace-in-instance _Xⱼ . rec-args) (uniform-get v _fieldⱼ)
+                ((!replace-in-instance _Xⱼ . rec-args) (uniform-get v _fieldⱼ)
                                                       acc)]
                …)
             (values (tagged _name #:instance [_fieldⱼ _resultⱼ] …)
@@ -382,10 +382,10 @@ where @racket[foldl-map] is defined as:
                 (for-meta 2 syntax/parse))
 
        (provide (for-syntax with-folds
-                            replace-in-type
-                            ∀-replace-in-type
-                            replace-in-instance
-                            λ-replace-in-instance))
+                            !replace-in-type
+                            !∀-replace-in-type
+                            !replace-in-instance
+                            !λ-replace-in-instance))
        <foldl-map>
        <with-folds>
        <cached>

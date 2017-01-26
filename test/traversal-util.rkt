@@ -17,6 +17,6 @@
         (template
          (begin
            (define-type _type-name
-             (∀-replace-in-type whole-type _type-to-replaceᵢ ...))
+             (!∀-replace-in-type whole-type _type-to-replaceᵢ ...))
            (define _function-name
-             (λ-replace-in-instance whole-type _type-to-replaceᵢ ...))))))]))
+             (!λ-replace-in-instance whole-type _type-to-replaceᵢ ...))))))]))
