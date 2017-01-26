@@ -15,7 +15,9 @@
                "scribble-lib"
                "pconvert-lib"
                "remember"
-               "extensible-parser-specifications"))
+               "extensible-parser-specifications"
+               "subtemplate"
+               "stxparse-info"))
 (define build-deps '("scribble-lib"
                      "racket-doc"
                      "remember"

@@ -129,12 +129,9 @@ the node types. It then binds the given @racket[name] to the
                 (for-syntax "graph-info.hl.rkt"
                             type-expander/expander
                             phc-toolkit/untyped
-                            (subtract-in syntax/parse phc-graph/subtemplate)
                             racket/set
-                            phc-graph/subtemplate-override
-                            racket/syntax
-                            extensible-parser-specifications
-                            backport-template-pr1514/experimental/template)
+                            subtemplate/override
+                            extensible-parser-specifications)
                 (for-meta 2 racket/base))
 
        (provide define-graph-type)

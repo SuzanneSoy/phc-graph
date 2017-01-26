@@ -1,6 +1,6 @@
 #lang typed/racket
-(require (for-syntax syntax/parse
-                     backport-template-pr1514/experimental/template
+(require (for-syntax stxparse-info/parse
+                     stxparse-info/parse/experimental/template
                      type-expander/expander)
          "../traversal.hl.rkt")
 

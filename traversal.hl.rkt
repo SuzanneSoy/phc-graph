@@ -227,7 +227,8 @@ not expressed syntactically using the @racket[Foo] identifier.
                     #`[(λ ({?@ _predicateᵢ _updateᵢ} …)
                          (λ (v acc)
                            #,(syntax-parse #'_whole-type
-                               #:literals (Null Pairof Listof List Vectorof Vector U tagged)
+                               #:literals (Null Pairof Listof List
+                                                Vectorof Vector U tagged)
                                <f-cases>)))
                        (∀ (_Aᵢ … _Bᵢ … Acc)
                           (→ (?@ (→ Any Boolean : _Aᵢ)
@@ -369,13 +370,10 @@ where @racket[foldl-map] is defined as:
                 type-expander
                 phc-adt
                 "dispatch-union.rkt"
-                (for-syntax  "subtemplate-override.rkt"
-                             (subtract-in (combine-in racket/base
-                                                      syntax/parse)
-                                          "subtemplate-override.rkt")
-                             backport-template-pr1514/experimental/template
+                (for-syntax  (subtract-in racket/base
+                                          subtemplate/override)
+                             subtemplate/override
                              phc-toolkit/untyped
-                             racket/syntax
                              type-expander/expander
                              "free-identifier-tree-equal.rkt"
                              racket/dict)

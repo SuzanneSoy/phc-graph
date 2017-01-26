@@ -107,12 +107,11 @@ initial elements to enqueue, and processes the queues till they are all empty.
 
 @chunk[<*>
        (require racket/require
-                (for-syntax (subtract-in (combine-in racket/base
-                                                     syntax/parse)
-                                         "subtemplate-override.rkt")
+                (for-syntax (subtract-in racket/base
+                                         subtemplate/override)
                             phc-toolkit/untyped
                             type-expander/expander
-                            "subtemplate-override.rkt")
+                            subtemplate/override)
                 "traversal.hl.rkt"
                 phc-toolkit)
        <define-index>

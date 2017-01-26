@@ -15,3 +15,4 @@
 (remembered! tagged-structure (| House-incomplete| owner))
 (remembered! tagged-structure (| Person-incomplete| name))
 (remembered! tagged-structure (City name))
+(remembered! tagged-structure (t0 w))
