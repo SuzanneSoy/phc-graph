@@ -59,24 +59,25 @@ The second occurrence of @racket[(Listof String)], although semantically
 equivalent to the type to replace, @racket[Foo], will not be altered, as it is
 not expressed syntactically using the @racket[Foo] identifier.
 
-@defform[(define-fold function-name type-name whole-type type-to-replaceᵢ ...)]{
+@defform[
+ (define-fold _function-name _type-name _whole-type _type-to-replaceᵢ ...)]{
  The @racket[define-fold] macro takes the type of the whole data structure, and
  a list of types to replace, each associated with a predicate for that type. It
  @;defines @racket[_name] as a macro, which behaves as follows:
- defines @racket[(type-name Tᵢ ...)] as a polymorphic type, with one type
- argument for each @racket[type-to-replaceᵢ], such that
+ defines @racket[(_type-name _Tᵢ ...)] as a polymorphic type, with one type
+ argument for each @racket[_type-to-replaceᵢ], such that
 
- @racketblock[(type-name type-to-replaceᵢ ...)]
+ @racketblock[(_type-name _type-to-replaceᵢ ...)]
 
  is the same type as
 
- @racketblock[whole-type]
+ @racketblock[_whole-type]
 
- In other words, @racket[type-name] is defined as @racket[whole-type], except
- that each syntactic occurrence of a @racket[type-to-replaceᵢ] is replaced with
- the corresponding type argument @racket[Tᵢ].
+ In other words, @racket[_type-name] is defined as @racket[_whole-type], except
+ that each syntactic occurrence of a @racket[_type-to-replaceᵢ] is replaced with
+ the corresponding type argument @racket[_Tᵢ].
 
- It also defines @racket[function-name] as a function, with the type
+ It also defines @racket[_function-name] as a function, with the type
 
  @racketblock[(∀ (Aᵢ ... Bᵢ ... Acc)
                  (→ (?@ (→ Any Boolean : Aᵢ)
@@ -91,7 +92,7 @@ not expressed syntactically using the @racket[Foo] identifier.
  @racketmodname[syntax/parse/experimental/template] to indicate that the
  function accepts a predicate, followed by an update function, followed by
  another predicate, and so on. For example, the function type when there are
- three @racket[type-to-replaceᵢ] would be:
+ three @racket[_type-to-replaceᵢ] would be:
 
  @racketblock[(∀ (A₁ A₂ A₃ B₁ B₂ B₃ Acc)
                  (→ (→ Any Boolean : A₁)
@@ -105,11 +106,11 @@ not expressed syntactically using the @racket[Foo] identifier.
                        (Values (type-name B₁ B₂ B₃)
                                Acc))))]
 
- The @racket[function-name] replaces all values in the whole data structure
- which are present in locations corresponding to a @racket[type-to-replaceᵢ] in
- the @racket[whole-type]. It expects those values to have the type @racket[Aᵢ],
- i.e. its input type is not restricted to @racket[whole-type], any polymorphic
- instance of @racket[type-name] is valid. Each value is passed as an argument
+ The @racket[_function-name] replaces all values in the whole data structure
+ which are present in locations corresponding to a @racket[_type-to-replaceᵢ] in
+ the @racket[_whole-type]. It expects those values to have the type @racket[Aᵢ],
+ i.e. its input type is not restricted to @racket[_whole-type], any polymorphic
+ instance of @racket[_type-name] is valid. Each value is passed as an argument
  to the corresponding update function with type
  @racket[(→ Aᵢ Acc (Values Bᵢ Acc))], and the result of type @racket[Bᵢ] is
  used as a replacement.

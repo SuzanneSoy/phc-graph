@@ -1,14 +1,14 @@
-<!-- Tufts VUE 3.3.0 concept-map (Graph-notes-copy2.vue) 2017-01-16 -->
+<!-- Tufts VUE 3.3.0 concept-map (Graph-notes-copy2.vue) 2017-01-28 -->
 <!-- Tufts VUE: http://vue.tufts.edu/ -->
 <!-- Do Not Remove: VUE mapping @version(1.1) jar:file:/nix/store/z92y35qgs6g3cvvh0i4f14mg5n47zvvi-vue-3.3.0/share/vue/vue.jar!/tufts/vue/resources/lw_mapping_1_1.xml -->
-<!-- Do Not Remove: Saved date Mon Jan 16 09:59:19 CET 2017 by georges on platform Linux 4.4.38 in JVM 1.8.0_122-04 -->
+<!-- Do Not Remove: Saved date Sat Jan 28 20:49:48 CET 2017 by georges on platform Linux 4.4.40 in JVM 1.8.0_122-04 -->
 <!-- Do Not Remove: Saving version @(#)VUE: built October 8 2015 at 1724 by tomadm on Linux 2.6.32-504.23.4.el6.x86_64 i386 JVM 1.7.0_21-b11(bits=32) -->
 <?xml version="1.0" encoding="US-ASCII"?>
 <LW-MAP xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="none" ID="0"
     label="Graph-notes-copy2.vue" created="1479309847604" x="0.0"
     y="0.0" width="1.4E-45" height="1.4E-45" strokeWidth="0.0" autoSized="false">
-    <resource referenceCreated="1484557159072" size="211457"
+    <resource referenceCreated="1485632988469" size="213358"
         spec="/home/georges/phc/racket-packages/phc-graph/Graph-notes-copy2.vue"
         type="1" xsi:type="URLResource">
         <title>Graph-notes-copy2.vue</title>
@@ -1376,7 +1376,7 @@
         <ID2 xsi:type="node">244</ID2>
     </child>
     <child ID="246" label="Too hard to implement for now" layerID="1"
-        created="1479314956001" x="1452.3375" y="1052.5447"
+        created="1479314956001" x="1563.3375" y="1093.5447"
         width="210.0" height="23.0" strokeWidth="1.0" autoSized="true" xsi:type="node">
         <fillColor>#A6A6A6</fillColor>
         <strokeColor>#776D6D</strokeColor>
@@ -1385,16 +1385,16 @@
         <URIString>http://vue.tufts.edu/rdf/resource/6e0b664c43a6be970d2ffe253b42a8fa</URIString>
         <shape arcwidth="20.0" archeight="20.0" xsi:type="roundRect"/>
     </child>
-    <child ID="247" layerID="1" created="1479314956003" x="1533.3042"
-        y="1028.2449" width="16.866577" height="24.799805"
+    <child ID="247" layerID="1" created="1479314956003" x="1544.263"
+        y="1028.2449" width="105.94922" height="65.799805"
         strokeWidth="1.0" autoSized="false" controlCount="0"
         arrowState="2" xsi:type="link">
         <strokeColor>#000000</strokeColor>
         <textColor>#404040</textColor>
         <font>SansSerif-plain-11</font>
         <URIString>http://vue.tufts.edu/rdf/resource/6e0b664c43a6be970d2ffe25426d76fa</URIString>
-        <point1 x="1533.8043" y="1028.7449"/>
-        <point2 x="1549.6709" y="1052.5447"/>
+        <point1 x="1544.763" y="1028.7449"/>
+        <point2 x="1649.7122" y="1093.5447"/>
         <ID1 xsi:type="node">244</ID1>
         <ID2 xsi:type="node">246</ID2>
     </child>
@@ -3825,12 +3825,49 @@
         <ID1 xsi:type="node">544</ID1>
         <ID2 xsi:type="node">546</ID2>
     </child>
+    <child ID="550"
+        label="Needs graph isomorphism in the general case (when the AST contains sets of nodes),&#xa;which is costly"
+        layerID="1" created="1485632929412" x="1640.6375" y="1037.7448"
+        width="579.0" height="38.0" strokeWidth="1.0" autoSized="true" xsi:type="node">
+        <fillColor>#A6A6A6</fillColor>
+        <strokeColor>#776D6D</strokeColor>
+        <textColor>#000000</textColor>
+        <font>SansSerif-plain-12</font>
+        <URIString>http://vue.tufts.edu/rdf/resource/e6a06477c0a80128519635b7f1185dc6</URIString>
+        <shape arcwidth="20.0" archeight="20.0" xsi:type="roundRect"/>
+    </child>
+    <child ID="551" layerID="1" created="1485632929416" x="1614.5303"
+        y="1025.436" width="121.777954" height="12.808716"
+        strokeWidth="1.0" autoSized="false" controlCount="0"
+        arrowState="2" xsi:type="link">
+        <strokeColor>#404040</strokeColor>
+        <textColor>#404040</textColor>
+        <font>SansSerif-plain-11</font>
+        <URIString>http://vue.tufts.edu/rdf/resource/e6a06478c0a80128519635b723122715</URIString>
+        <point1 x="1615.0302" y="1025.936"/>
+        <point2 x="1735.8081" y="1037.7448"/>
+        <ID1 xsi:type="node">244</ID1>
+        <ID2 xsi:type="node">550</ID2>
+    </child>
+    <child ID="554" layerID="1" created="1485632973031" x="1730.171"
+        y="1075.2449" width="97.48096" height="18.799927"
+        strokeWidth="1.0" autoSized="false" controlCount="0"
+        arrowState="2" xsi:type="link">
+        <strokeColor>#404040</strokeColor>
+        <textColor>#404040</textColor>
+        <font>SansSerif-plain-11</font>
+        <URIString>http://vue.tufts.edu/rdf/resource/e6a06478c0a80128519635b734204420</URIString>
+        <point1 x="1827.152" y="1075.7448"/>
+        <point2 x="1730.671" y="1093.5447"/>
+        <ID1 xsi:type="node">550</ID1>
+        <ID2 xsi:type="node">246</ID2>
+    </child>
     <layer ID="1" label="Layer 1" created="1479309847607" x="0.0"
         y="0.0" width="1.4E-45" height="1.4E-45" strokeWidth="0.0" autoSized="false">
         <URIString>http://vue.tufts.edu/rdf/resource/6dbf6b15c0a80026548592b8d2f3fee2</URIString>
     </layer>
-    <userZoom>0.75</userZoom>
-    <userOrigin x="-1182.522" y="-189.81644"/>
+    <userZoom>1.0</userZoom>
+    <userOrigin x="-1573.3625" y="-273.75525"/>
     <presentationBackground>#FFFFFF</presentationBackground>
     <PathwayList currentPathway="0" revealerIndex="-1">
         <pathway ID="0" label="Chemin sans nom" created="1479309847603"

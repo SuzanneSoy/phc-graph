@@ -10,7 +10,6 @@
                "typed-racket-lib"
                "srfi-lite-lib"
                "delay-pure"
-               "backport-template-pr1514"
                "typed-map"
                "scribble-lib"
                "pconvert-lib"
