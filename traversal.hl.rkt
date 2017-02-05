@@ -8,10 +8,12 @@
           (for-label racket/format
                      racket/promise
                      racket/list
-                     syntax/parse
-                     syntax/parse/experimental/template
+                     (except-in subtemplate/override begin let)
                      type-expander
-                     (except-in (subtract-in typed/racket/base type-expander)
+                     phc-adt
+                     (except-in (subtract-in typed/racket/base
+                                             type-expander
+                                             subtemplate/override)
                                 values)
                      (only-in racket/base values)
                      (subtract-in racket/contract typed/racket/base)
@@ -173,13 +175,13 @@ not expressed syntactically using the @racket[Foo] identifier.
                      (get-τ-cache)
                      (get-τ-defs)
                      #'(_whole-type _type-to-replaceᵢ …)]
-                    (define replacements (make-immutable-free-id-tree-table
-                                          (map syntax-e
-                                               (syntax->list
-                                                #'([_type-to-replaceᵢ . _Tᵢ] …)))))
+                    (define replacements
+                      (make-immutable-free-id-tree-table
+                       (list [cons #'_type-to-replaceᵢ #'_Tᵢ] …)))
                     #`(∀ (_Tᵢ …)
                          #,(syntax-parse #'_whole-type
-                             #:literals (Null Pairof Listof List Vectorof Vector U tagged)
+                             #:literals (Null Pairof Listof List Vectorof Vector
+                                              U tagged)
                              <type-cases>)))]))]
 
 @CHUNK[<cached>
@@ -216,31 +218,34 @@ not expressed syntactically using the @racket[Foo] identifier.
          (syntax-parser
            [(_whole-type:type _type-to-replaceᵢ:type …)
             #:with rec-args #'([_type-to-replaceᵢ _predicateᵢ _updateᵢ] …)
-            (define replacements (make-immutable-free-id-tree-table
-                                  (map syntax-e
-                                       (syntax->list
-                                        #'([_type-to-replaceᵢ . _updateᵢ] …)))))
+            (define replacements
+              (make-immutable-free-id-tree-table
+               (list [cons #'_type-to-replaceᵢ #'_updateᵢ] …)))
             (define/with-syntax _args #'({?@ _predicateᵢ _updateᵢ} …))
             (cached [f-
                      (get-f-cache)
                      (get-f-defs)
                      #'(_whole-type _type-to-replaceᵢ …)]
-                    #`[(λ ({?@ _predicateᵢ _updateᵢ} …)
-                         (λ (v acc)
-                           #,(syntax-parse #'_whole-type
-                               #:literals (Null Pairof Listof List
-                                                Vectorof Vector U tagged)
-                               <f-cases>)))
-                       (∀ (_Aᵢ … _Bᵢ … Acc)
-                          (→ (?@ (→ Any Boolean : _Aᵢ)
-                                 (→ _Aᵢ Acc (Values _Bᵢ Acc)))
-                             …
-                             (→ (!replace-in-type _whole-type
-                                                 [_type-to-replaceᵢ _Aᵢ] …)
-                                Acc
-                                (Values (!replace-in-type _whole-type
-                                                         [_type-to-replaceᵢ _Bᵢ] …)
-                                        Acc))))])]))]
+                    #`[<fold-f-proc>
+                       <fold-f-type>])]))]
+
+@CHUNK[<fold-f-proc>
+       (λ ({?@ _predicateᵢ _updateᵢ} …)
+         (λ (v acc)
+           #,(syntax-parse #'_whole-type
+               #:literals (Null Pairof Listof List
+                                Vectorof Vector U tagged)
+               <f-cases>)))]
+
+@chunk[<fold-f-type>
+       (∀ (_Aᵢ … _Bᵢ … Acc)
+          (→ (?@ (→ Any Boolean : _Aᵢ)
+                 (→ _Aᵢ Acc (Values _Bᵢ Acc)))
+             …
+             (→ (!replace-in-type _whole-type [_type-to-replaceᵢ _Aᵢ] …)
+                Acc
+                (Values (!replace-in-type _whole-type [_type-to-replaceᵢ _Bᵢ] …)
+                        Acc))))]
 
 @chunk[<f-cases>
        [t
