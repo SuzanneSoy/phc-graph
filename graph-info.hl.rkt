@@ -178,15 +178,15 @@ A field has a type.
          [(define write-proc (struct-printer 'invariant-info))]
          #:property prop:custom-print-quotable 'never
          #:methods gen:equal+hash
-         [(define (equal-proc a b r)
-            (free-id-tree=? (vector->immutable-vector (struct->vector a))
-                            (vector->immutable-vector (struct->vector b))))
-          (define (hash-proc a r)
-            (free-id-tree-hash-code
-             (vector->immutable-vector (struct->vector a))))
-          (define (hash2-proc a r)
-            (free-id-tree-secondary-hash-code
-             (vector->immutable-vector (struct->vector a))))])]
+         |<gen:equal+hash free-id-tree=?>|)]
+
+Instances of @racket[invariant-info] are compared pointwise with
+@racket[free-id-tree=?]:
+
+@chunk[|<gen:equal+hash free-id-tree=?>|
+       [(define equal-proc free-id-tree=?)
+        (define hash-proc free-id-tree-hash-code)
+        (define hash2-proc free-id-tree-secondary-hash-code)]]
 
 @section{Dependent invariant information}
 
@@ -203,15 +203,10 @@ which relate the old and the new graph in a graph transformation.
          [(define write-proc (struct-printer 'dependent-invariant-info))]
          #:property prop:custom-print-quotable 'never
          #:methods gen:equal+hash
-         [(define (equal-proc a b r)
-            (free-id-tree=? (vector->immutable-vector (struct->vector a))
-                            (vector->immutable-vector (struct->vector b))))
-          (define (hash-proc a r)
-            (free-id-tree-hash-code
-             (vector->immutable-vector (struct->vector a))))
-          (define (hash2-proc a r)
-            (free-id-tree-secondary-hash-code
-             (vector->immutable-vector (struct->vector a))))])]
+         |<gen:equal+hash free-id-tree=?>|)]
+
+Instances of @racket[dependent-invariant-info] are compared pointwise with
+@racket[free-id-tree=?], like @racket[invariant-info].
 
 @section{Mapping information}
 
@@ -314,8 +309,6 @@ data.
                               {~seq #:property _ _})
                          ...)))
          #:with name/c (format-id #'name "~a/c" #'name)
-         ;(quasisyntax/loc (stx-car this-syntax)
-         ;  #,
          (template
           (begin
             (struct name (?? parent) (field ...)
@@ -335,7 +328,6 @@ data.
                                       [field contract]
                                       ...)))))))
 
-       ;<hash-set/c>
        <printer>
 
        <field-info>

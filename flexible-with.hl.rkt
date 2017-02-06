@@ -317,7 +317,8 @@ interesting subparts of the trees (those where there are fields).
        #`(begin
            (define-type-expander bt-fields-id
              (bt-fields-type #'#,(syntax-local-introduce #'(field …))))
-           #,@(map #λ(define-replace-in-tree low-names names rm-names ∀-types % (floor-log2 %))
+           #,@(map #λ(define-replace-in-tree low-names
+                       names rm-names ∀-types % (floor-log2 %))
                    (range 1 (add1 total-nb-functions)))
            #;#,@(map #λ(define-remove-in-tree rm-names ∀-types % (floor-log2 %))
                      (range 1 (add1 total-nb-functions)))

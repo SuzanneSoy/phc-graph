@@ -32,12 +32,13 @@
                            (vectorof isyntax #:immutable #t)
                            (syntax/c isyntax)
                            (and/c immutable-struct?
-                                  prefab-struct-key
                                   (λ (v)
                                     (andmap isyntax/c (struct->list v)))))))
 
 (define/contract (free-id-tree=? a b [r equal?])
-  (-> isyntax/c isyntax/c boolean?)
+  (->* {isyntax/c isyntax/c}
+       {(-> isyntax/c isyntax/c boolean?)}
+       boolean?)
   (define (rec=? a b) (free-id-tree=? a b r))
   (cond
     [(identifier? a) (and (identifier? b)
@@ -60,23 +61,28 @@
             (and (equal? a-key b-key)
                  (rec=? (struct->list a)
                         (struct->list b)))))]
+    [(struct? a)
+     (rec=? (vector->immutable-vector (struct->vector a)))]
     [(null? a) (null? b)]
     [else (equal? a b)]))
 
-(define/contract ((free-id-tree-hash hc) a)
-  (-> (-> any/c fixnum?) (-> isyntax/c fixnum?))
+(define/contract ((free-id-tree-hash default-hc) a [hc default-hc])
+  (-> (-> any/c fixnum?) (-> isyntax/c (-> isyntax/c fixnum?) fixnum?))
   (define rec-hash (free-id-tree-hash hc))
   (cond
     [(identifier? a) (hc (syntax-e #'a))]
     [(syntax? a) (rec-hash (syntax-e a))]
     [(pair? a) (hc (cons (rec-hash (car a))
                          (rec-hash (cdr a))))]
-    [(vector? a) (hc (list->vector (map rec-hash (vector->list a))))]
+    [(vector? a) (hc (vector->immutable-vector
+                      (list->vector (map rec-hash (vector->list a)))))]
     [(box? a) (hc (box (rec-hash (unbox a))))]
     [(prefab-struct-key a)
      => (λ (a-key)
           (hc (apply make-prefab-struct a-key
                      (rec-hash (struct->list a)))))]
+    [(struct? a)
+     (rec-hash (vector->immutable-vector (struct->vector a)))]
     [else (hc a)]))
 
 (define free-id-tree-hash-code

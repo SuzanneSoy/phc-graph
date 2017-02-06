@@ -310,13 +310,18 @@ not expressed syntactically using the @racket[Foo] identifier.
 
 @CHUNK[<f-cases>
        [(List X Y …)
-        #'(let*-values ([(result-x acc-x) ((!replace-in-instance X . rec-args)
-                                           (car v)
-                                           acc)]
-                        [(result-y* acc-y*) ((!replace-in-instance (List Y …) . rec-args)
-                                             (cdr v)
-                                             acc-x)])
+        #'(let*-values ([(result-x acc-x) <f-list-car>]
+                        [(result-y* acc-y*) <f-list-cdr>])
             (values (cons result-x result-y*) acc-y*))]]
+
+where the replacement is applied to the @racket[car], and to the @racket[cdr]
+as a whole (i.e. by recursion on the whole remaining list of types):
+
+@chunk[<f-list-car>
+       ((!replace-in-instance X . rec-args) (car v) acc)]
+
+@chunk[<f-list-cdr>
+       ((!replace-in-instance (List Y …) . rec-args) (cdr v) acc-x)]
 
 @CHUNK[<type-cases>
        [(U _Xⱼ …)
