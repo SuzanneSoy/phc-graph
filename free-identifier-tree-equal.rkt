@@ -62,12 +62,14 @@
                  (rec=? (struct->list a)
                         (struct->list b)))))]
     [(struct? a)
-     (rec=? (vector->immutable-vector (struct->vector a)))]
+     (and (struct? b)
+          (rec=? (vector->immutable-vector (struct->vector a))
+                 (vector->immutable-vector (struct->vector b))))]
     [(null? a) (null? b)]
     [else (equal? a b)]))
 
 (define/contract ((free-id-tree-hash default-hc) a [hc default-hc])
-  (-> (-> any/c fixnum?) (-> isyntax/c (-> isyntax/c fixnum?) fixnum?))
+  (-> (-> any/c fixnum?) (->* {isyntax/c} {(-> isyntax/c fixnum?)} fixnum?))
   (define rec-hash (free-id-tree-hash hc))
   (cond
     [(identifier? a) (hc (syntax-e #'a))]

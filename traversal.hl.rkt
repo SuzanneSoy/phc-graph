@@ -17,7 +17,7 @@
                                 values)
                      (only-in racket/base values)
                      (subtract-in racket/contract typed/racket/base)
-                     phc-toolkit
+                     (except-in phc-toolkit generate-temporary)
                      phc-toolkit/untyped-only
                      remember))
 @(unless-preexpanding
