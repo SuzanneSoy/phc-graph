@@ -7,7 +7,7 @@ elif test "$TRAVIS_PULL_REQUEST" != "false"; then
   echo "This is a Pull Request, will not auto-push to master."
 elif test "$TRAVIS_BRANCH" != "dev"; then
   echo "Not on dev branch (TRAVIS_BRANCH = $TRAVIS_BRANCH), will not auto-push to master."
-elif test -z "${encrypted_8fdb34b09f5e_key:-}" -o -z "${encrypted_8fdb34b09f5e_iv:-}"; then
+elif test -z "${encrypted_c195df270029_key:-}" -o -z "${encrypted_c195df270029_iv:-}"; then
   echo "Travis CI secure environment variables are unavailable, will not auto-push to master."
 else
   set -x
@@ -21,7 +21,7 @@ else
   mkdir -p ~/.ssh
   chmod 700 ~/.ssh
   set +x
-  if openssl aes-256-cbc -K $encrypted_8fdb34b09f5e_key -iv $encrypted_8fdb34b09f5e_iv -in travis-deploy-key-id_rsa.enc -out travis-deploy-key-id_rsa -d >/dev/null 2>&1; then
+  if openssl aes-256-cbc -K $encrypted_c195df270029_key -iv $encrypted_c195df270029_iv -in travis-deploy-key-id_rsa.enc -out travis-deploy-key-id_rsa -d >/dev/null 2>&1; then
     echo "Decrypted key successfully."
   else
     echo "Error while decrypting key."
