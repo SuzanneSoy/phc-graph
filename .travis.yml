@@ -1,0 +1,10 @@
+language: c
+
+sudo: false
+
+before_install:
+
+install:
+
+script:
+ - sh ./auto-push-master.sh
