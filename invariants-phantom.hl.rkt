@@ -371,8 +371,8 @@ relates two nodes in the graph.
 
 @chunk[<cycles>
        (struct ε () #:transparent)
-       (struct (T) Target () #:transparent)
-       (struct (T) NonTarget Target ([x : T]) #:transparent)
+       (struct (T) Target ([x : T]) #:transparent)
+       (struct (T) NonTarget Target () #:transparent)
        
        (define-type-expander Cycle
          (syntax-parser
@@ -432,14 +432,16 @@ Two sorts of paths inside (in)equality constraints:
 @subsection{Putting it all together}
 
 @chunk[<check-a-stronger-b>
-       (define-syntax (check-a-stronger-or-same-b stx)
+       (define-syntax (check-a-stronger-than-b stx)
          (syntax-case stx ()
            [(_ stronger weaker)
             (syntax/top-loc stx
-              (check-ann (ann witness-value stronger)
-                         weaker))]))
+              (begin (check-ann (ann witness-value stronger)
+                                weaker)
+                     (check-not-tc
+                      (ann (ann witness-value weaker) stronger))))]))
        
-       (define-syntax (check-a-same-b stx)
+       (define-syntax (check-a-same-as-b stx)
          (syntax-case stx ()
            [(_ a b)
             (syntax/top-loc stx
@@ -450,6 +452,8 @@ Two sorts of paths inside (in)equality constraints:
 @chunk[<*>
        (require (for-syntax phc-toolkit/untyped
                             syntax/parse))
+
+       (provide Invariants ≡)
        
        <witness-value>
        <grouping-invariants>
@@ -464,20 +468,20 @@ Two sorts of paths inside (in)equality constraints:
          (ann witness-value (Invariants)) ;; No invariants
          (ann witness-value (Invariants (≡ (_ a) (_ a b c))))
 
-         (check-a-stronger-or-same-b (Invariants (≡ (_ a) (_ a b c)))
-                                     (Invariants))
+         (check-a-stronger-than-b (Invariants (≡ (_ a) (_ a b c)))
+                                  (Invariants))
 
-         (check-a-same-b (Invariants (≡ (_ a) (_ a b c)))
+         (check-a-same-as-b (Invariants (≡ (_ a) (_ a b c)))
                          (Invariants (≡ (_ a b c) (_ a))))
 
-         (check-a-stronger-or-same-b (Invariants (≡ (_) (_ b c))
-                                                 (≡ (_) (_ b d)))
-                                     (Invariants (≡ (_) (_ b c))))
-         (check-a-stronger-or-same-b (Invariants (≡ (_) (_ b d))
-                                                 (≡ (_) (_ b c)))
-                                     (Invariants (≡ (_) (_ b c))))
+         (check-a-stronger-than-b (Invariants (≡ (_) (_ b c))
+                                              (≡ (_) (_ b d)))
+                                  (Invariants (≡ (_) (_ b c))))
+         (check-a-stronger-than-b (Invariants (≡ (_) (_ b d))
+                                              (≡ (_) (_ b c)))
+                                  (Invariants (≡ (_) (_ b c))))
 
-         (check-a-stronger-or-same-b (Invariants (≡ (_)
-                                                    (_ b d a b d ↙ a b (d))))
-                                     (Invariants (≡ (_)
-                                                    (_ b d ↙ a b (d))))))]
+         (check-a-stronger-than-b (Invariants (≡ (_)
+                                                 (_ b d a b d ↙ a b (d))))
+                                  (Invariants (≡ (_)
+                                                 (_ b d ↙ a b (d))))))]
