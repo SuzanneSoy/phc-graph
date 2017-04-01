@@ -343,9 +343,33 @@ having an empty union.
 
 @subsubsection{Invariants and their relationships}
 
-@itemlist[
- @item{Paths, }
- ]
+We design our typing hierarchy to allow encoding the equality, inequality,
+membership and non-membership between paths. A simple example would be
+the property @racket[:A.b.c ≡ :A.d.e], which would hold for all nodes of type
+@racket[A].
+
+These paths patterns form a suffix of actual paths. Let @${S₁} and @${S₂} be
+two sets of pairs of suffixes. If the set of pairs of actual paths covered by
+@${S₁} is a superset the set of pairs of actual paths covered by @${S₂}, then
+@${S₁} can be used to express a property over more pairs of actual paths,
+and the resulting property on the graph as a whole is therefore more precise.
+
+Our implementation allows the concise expression of a set of paths using a
+template within which sections of the path may be repeated any number of
+times. For example, the template @racket[:A.b(.c)*.d] corresponds to the set of
+paths containing @racket[:A.b.d], @racket[:A.b.c.d], @racket[:A.b.c.c.d] and so
+on.
+
+When path elements may produce a value whose type is a variant (i.e. a union
+of several constructors), it can be necessary to distinguish which
+constructor(s) the path applies to. We use a syntax inspired from that of
+@racketmodname[syntax/parse] for that purpose. Any point in a path can be
+followed by @racket[:node-name], which effectively refines the set of actual
+paths so that it contains only paths where the value at that point is of the
+given type. The syntax @racket[:A.b.c] therefore indicates that the path must
+start on an element of type @racket[A], and follow its fields @racket[b] then
+@racket[c]. The syntax @racket[.x:T.y.z] indicates paths @racket[.x.y.z], where
+the element accessed by @racket[.x] has the type @racket[T].
 
 @subsubsection{Comparison operator tokens}
 
