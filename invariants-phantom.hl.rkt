@@ -15,12 +15,12 @@
 
 @section{Introduction}
 
-The cautious compiler writer will no doubt want to check that the graph used
-to represent the program verifies some structural properties. For example, the
-compiled language might not allow cycles between types. Another desirable
-property is that the @racket[in-method] field of an instruction points back to
-the method containing it. We will use this second property as a running
-example in this section.
+The cautious compiler writer will no doubt want to check that the Abstract
+Syntax Tree or Graph used to represent the program verifies some structural
+properties. For example, the compiled language might not allow cycles between
+types. Another desirable property is that the @racket[in-method] field of the
+node representing an instruction points back to the method containing it. We
+will use this second property as a running example in this section.
 
 @section{Implementation overview : subtyping, variance and phantom types}
 
@@ -341,6 +341,12 @@ having an empty union.
 
 @subsection{Structural (in)equality and (non-)membership invariants}
 
+@subsubsection{Invariants and their relationships}
+
+@itemlist[
+ @item{Paths, }
+ ]
+
 @subsubsection{Comparison operator tokens}
 
 We define some tokens which will be used to identify the operator which
@@ -377,17 +383,20 @@ relates two nodes in the graph.
        (define-type-expander Cycle
          (syntax-parser
            [(_ field:id … {~literal ↙} loop1:id … (target:id) loop2:id …)
-            #'(List* (NonTarget ε)
-                     (NonTarget 'field) …
-                     (Rec R (List* (NonTarget 'loop1) … ;(NonTarget 'loop1) …
-                                   (Target 'target) ;(NonTarget 'target)
-                                   (NonTarget 'loop2) … ;(NonTarget 'loop2) …
-                                   R)))]
+            #'(→ (List* (NonTarget ε)
+                        (NonTarget 'field) …
+                        (Rec R (List* (NonTarget 'loop1) … ;(NonTarget 'loop1) …
+                                      (Target 'target) ;(NonTarget 'target)
+                                      (U (List* (NonTarget 'loop2) … ;(NonTarget 'loop2) …
+                                                R)
+                                         Null)))) Void)]
            [(_ field … target)
-            ;; TODO: something special at the end?
-            #'(List (NonTarget ε) (NonTarget 'field) … (Target 'target))]
+            #'(→ (List (NonTarget ε)
+                       (NonTarget 'field)
+                       …
+                       (Target 'target)) Void)]
            [(_)
-            #'(List (Target ε))]))]
+            #'(→ (List (Target ε)) Void)]))]
 
 @;{@[
    
@@ -431,57 +440,23 @@ Two sorts of paths inside (in)equality constraints:
 
 @subsection{Putting it all together}
 
-@chunk[<check-a-stronger-b>
-       (define-syntax (check-a-stronger-than-b stx)
-         (syntax-case stx ()
-           [(_ stronger weaker)
-            (syntax/top-loc stx
-              (begin (check-ann (ann witness-value stronger)
-                                weaker)
-                     (check-not-tc
-                      (ann (ann witness-value weaker) stronger))))]))
-       
-       (define-syntax (check-a-same-as-b stx)
-         (syntax-case stx ()
-           [(_ a b)
-            (syntax/top-loc stx
-              (begin
-                (check-ann (ann witness-value a) b)
-                (check-ann (ann witness-value b) a)))]))]
-
 @chunk[<*>
        (require (for-syntax phc-toolkit/untyped
                             syntax/parse))
 
-       (provide Invariants ≡)
-       
+       ;; For testing:
+       (provide Invariants
+                ≡
+                inv≡
+                inv≢
+                Or
+                Target
+                NonTarget
+                ε
+                witness-value)
+
        <witness-value>
        <grouping-invariants>
        <cycles>
        <comparison-operators>
-       <≡>
-
-       (module+ test
-         (require phc-toolkit)
-         <check-a-stronger-b>
-
-         (ann witness-value (Invariants)) ;; No invariants
-         (ann witness-value (Invariants (≡ (_ a) (_ a b c))))
-
-         (check-a-stronger-than-b (Invariants (≡ (_ a) (_ a b c)))
-                                  (Invariants))
-
-         (check-a-same-as-b (Invariants (≡ (_ a) (_ a b c)))
-                         (Invariants (≡ (_ a b c) (_ a))))
-
-         (check-a-stronger-than-b (Invariants (≡ (_) (_ b c))
-                                              (≡ (_) (_ b d)))
-                                  (Invariants (≡ (_) (_ b c))))
-         (check-a-stronger-than-b (Invariants (≡ (_) (_ b d))
-                                              (≡ (_) (_ b c)))
-                                  (Invariants (≡ (_) (_ b c))))
-
-         (check-a-stronger-than-b (Invariants (≡ (_)
-                                                 (_ b d a b d ↙ a b (d))))
-                                  (Invariants (≡ (_)
-                                                 (_ b d ↙ a b (d))))))]
+       <≡>]

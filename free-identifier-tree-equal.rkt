@@ -2,7 +2,7 @@
 
 (require racket/struct
          ;; TODO: move delay-pure/private/immutable-struct to a separate package
-         delay-pure/private/immutable-struct) ;; for immutable-struct? below.
+         phc-toolkit/untyped/meta-struct) ;; for immutable-struct? below.
 
 (provide free-id-tree=?
          free-id-tree-hash-code
@@ -31,7 +31,7 @@
                            (cons/c isyntax isyntax)
                            (vectorof isyntax #:immutable #t)
                            (syntax/c isyntax)
-                           (and/c immutable-struct?
+                           (and/c struct-instance-is-immutable?
                                   (λ (v)
                                     (andmap isyntax/c (struct->list v)))))))
 
