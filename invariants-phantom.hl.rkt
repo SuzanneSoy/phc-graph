@@ -134,8 +134,8 @@ the union never becomes empty.
 This solution also has the advantage that the size of the run-time witness is
 constant, and does not depend on the number of checked contracts (unlike the
 representation using a list). In practice the function should never be called.
-It can however simply be implemented in a way which pleases the type checked
-as a function accepting anything and returning void.
+It can however simply be implemented, in a way which will match all witness
+types, as a function accepting anything and returning void.
 
 In addition to testifying that a graph node was checked against multiple,
 separate contracts, there might be some contracts which check stronger
@@ -328,8 +328,8 @@ As mentioned earlier, we group invariants together using an untagged union
 @racket[U], which must appear in a contravariant position. We wish to express
 witnesses for stronger invariants as subtypes of witnesses for weaker
 invariants, and therefore use a second nested function type to flip again the
-variance direction. We always include the Or element in the union, to avoid
-having an empty union.
+variance direction. We always include the @racket[Or] element in the union, to
+avoid ever having an empty union.
 
 @chunk[<grouping-invariants>
        (struct Or ())
@@ -370,6 +370,95 @@ given type. The syntax @racket[:A.b.c] therefore indicates that the path must
 start on an element of type @racket[A], and follow its fields @racket[b] then
 @racket[c]. The syntax @racket[.x:T.y.z] indicates paths @racket[.x.y.z], where
 the element accessed by @racket[.x] has the type @racket[T].
+
+The @racket[?] path element indicates that any field can be used at the given
+point. The syntax @racket[.x.?.y] therefore indicates the paths
+@racket[.x.f.y], @racket[.x.g.y], @racket[.x.h.y] and so on, where @racket[f],
+@racket[g] and @racket[h] are the fields of the value obtained after
+@racket[.x]. The @racket[?] path element can be used to describe all fields,
+including those hidden away by row polymorphism.
+
+It would be possible to represent sets of path concisely by reversing all
+these paths so that they start with their target element, and building a
+prefix tree. Unfortunately, Typed Racket does not currently does not
+automatically detect the equivalence between the types
+@racket[(U (Pairof A B) (Pairof A C))] and @racket[(Pairof A (U B C))]. @;{
+ TODO: insert reference to the relevant bug.} In other words, at the type
+level, unions do not implicitly distribute onto pairs. When a set of
+properties @racket[S] is extended with a new property @racket[p], the
+resulting set of properties will be encoded as @racket[(U S p)]. If @racket[S]
+is encoded as a prefix tree, @racket[p] will not implicitly be merged into the
+prefix tree. This means that if prefix trees were to be used, extending a set
+of properties with a new property would give one representation, and directly
+encoding that set would give another representation, and the two
+representations would be incomparable.
+
+We therefore represent sets of paths using a more costly representation, by
+making a union of all paths, without factoring out common parts.
+
+@subsection{Parsing paths}
+
+@; TODO: make sure the literal "dot" is provided.
+
+@;   .a.b(.c.d)*.e
+@; ⇒ (λdot a b) ((λdot c d)) * (λdot e)
+
+@chunk[<parse>
+       (begin-for-syntax
+         (define-syntax-class dot-ish
+           #:literals (dot λdot)
+           (pattern ({~and d dot} e …)
+                    #:with full
+                    (add-between (syntax->list #'(e …))
+                                 (datum->syntax #'d '|.| #'d #'d)))
+           (pattern ({~and d λdot} e …)
+                    #:with full
+                    (cons #'d (add-between (syntax->list #'(e …))
+                                           (datum->syntax #'d '|.| #'d #'d)))))
+         (define-syntax ~dot-ish
+           (pattern-expander
+            (λ (stx)
+              (syntax-case stx ()
+                [(_ pat …)
+                 #'(~and x:dot-ish
+                         (~parse (pat …) #'x))]))))
+
+         (define (match-id rx id)
+           (let ([m (regexp-match rx (identifier→string id))])
+             (and m (map (λ (%) (datum->syntax id (string->symbol %) id id))
+                         (cdr m)))))
+         (define-syntax ~rx-id
+           (pattern-expander
+            (λ (stx)
+              (syntax-case stx ()
+                [(_ rx g …)
+                 #'(~and x:id
+                         {~parse (g …) (match-id rx #'x)})]))))
+
+         (define-syntax-class f+τ
+           #:attributes (f τ)
+           (pattern {~rx-id #px"^([^:]+):([^:]+)$" f τ})
+           (pattern {~rx-id #px"^([^:]+)$" f} #:with ({~optional τ}) #'())
+           (pattern {~rx-id #px"^:([^:]+)$" τ} #:with ({~optional f}) #'()))
+         (define-syntax-class just-τ
+           #:attributes (τ)
+           (pattern {~rx-id #px"^:([^:]+)$" τ}))
+         (define-syntax-class π-elements
+           #:literals (|.|)
+           (pattern
+            (~dot-ish {~or {~seq |.| :f+τ} elt:π-elements} …)))
+         (define-syntax-class whole-π
+           #:literals (|.|)
+           (pattern
+            (~dot-ish {~optional τ₀:just-τ}
+                      {~or {~seq |.| :f+τ} elt:π-elements} …)))
+         )]
+
+@chunk[<parse>
+       (define-for-syntax parse-path
+         (syntax-parser
+           [:whole-π
+            'ok]))]
 
 @subsubsection{Comparison operator tokens}
 
@@ -447,6 +536,7 @@ relates two nodes in the graph.
 @; becomes (Pairof (∩ 'a 'x) (∩ 'b 'c)), which is equivalent to have all four
 @; elements of {a,x} × {b,c}, but we only want three out of these four.
 
+@;{
 Two sorts of paths inside (in)equality constraints:
 
 @itemlist[
@@ -461,12 +551,18 @@ Two sorts of paths inside (in)equality constraints:
    ∀\ \textit{node}₂ : \textit{NodeType}₂,\\
    \textit{node}₁.\textit{path}₁ ≡ \textit{node}₂.\textit{path}₂
    \end{array}}}]
+ }
 
 @subsection{Putting it all together}
 
 @chunk[<*>
-       (require (for-syntax phc-toolkit/untyped
-                            syntax/parse))
+       (require (for-syntax racket/base
+                            racket/list
+                            phc-toolkit/untyped
+                            syntax/parse)
+                (for-meta 2 racket/base)
+                (for-meta 2 phc-toolkit/untyped/aliases)
+                (for-meta 3 racket/base))
 
        ;; For testing:
        (provide Invariants
@@ -478,6 +574,8 @@ Two sorts of paths inside (in)equality constraints:
                 NonTarget
                 ε
                 witness-value)
+
+       <parse>
 
        <witness-value>
        <grouping-invariants>
