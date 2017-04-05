@@ -444,21 +444,47 @@ making a union of all paths, without factoring out common parts.
            #:attributes (τ)
            (pattern {~rx-id #px"^:([^:]+)$" τ}))
          (define-syntax-class π-elements
-           #:literals (|.|)
+           #:literals (|.| *)
            (pattern
-            (~dot-ish {~or {~seq |.| :f+τ} elt:π-elements} …)))
+            (~dot-ish {~or {~seq |.| :f+τ} {~seq sub:π-elements *}} …)))
          (define-syntax-class whole-π
-           #:literals (|.|)
+           #:literals (|.| *)
+           #:attributes ([f 1] [τ 1] [τ₀ 0])
            (pattern
-            (~dot-ish {~optional τ₀:just-τ}
-                      {~or {~seq |.| :f+τ} elt:π-elements} …)))
-         )]
+            (~dot-ish {~optional fst:just-τ}
+                      {~or {~seq |.| :f+τ} {~seq sub:π-elements *}} …)
+            #:with τ₀ #'fst.τ)))]
 
 @chunk[<parse>
+       (define-type-expander (<~τ stx)
+         (syntax-case stx ()
+           [(_ τ) #'τ]
+           [(_ f₀ . more)
+            #'(f₀ (<~τ . more))]))
+       (begin-for-syntax
+         (define-template-metafunction (generate-sub-π stx)
+           (syntax-parser
+             [(_ :π-elements after)
+              (template
+               (Rec R
+                    (U (<~τ (?? (∀ (more) (generate-sub-π sub more))
+                                (∀ (more) (List* (Pairof (?? f AnyField)
+                                                         (?? τ AnyType))
+                                                 more)))
+                            …
+                            R)
+                       after)))])))
        (define-for-syntax parse-path
          (syntax-parser
            [:whole-π
-            'ok]))]
+            (template (Rec R (U (Pairof Any R) <π>)))]))]
+
+@chunk[<π>
+       (<~τ (?? (∀ (more) (List* (Pairof AnyField τ₀) more)))
+            (?? (∀ (more) (generate-sub-π sub more))
+                (∀ (more) (List* (Pairof (?? f AnyField) (?? τ AnyType)) more)))
+            …
+            Null)]
 
 @subsubsection{Comparison operator tokens}
 
@@ -492,6 +518,9 @@ relates two nodes in the graph.
        (struct ε () #:transparent)
        (struct (T) Target ([x : T]) #:transparent)
        (struct (T) NonTarget Target () #:transparent)
+
+       (struct AnyField () #:transparent)
+       (struct AnyType () #:transparent)
        
        (define-type-expander Cycle
          (syntax-parser
@@ -559,7 +588,8 @@ Two sorts of paths inside (in)equality constraints:
        (require (for-syntax racket/base
                             racket/list
                             phc-toolkit/untyped
-                            syntax/parse)
+                            syntax/parse
+                            syntax/parse/experimental/template)
                 (for-meta 2 racket/base)
                 (for-meta 2 phc-toolkit/untyped/aliases)
                 (for-meta 3 racket/base))
