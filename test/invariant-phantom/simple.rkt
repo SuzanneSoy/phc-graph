@@ -51,6 +51,25 @@
        (U (List (Pairof 'd AnyType) (Pairof 'e AnyType))
           (Pairof (Pairof 'b AnyType) (Pairof (Pairof 'c AnyType) R))))))))
 
+(check-same-type
+ (Π (dot :a) ((λdot b c) ((λdot w)) * (λdot x y))* (λdot d e))
+ (Rec
+  R
+  (U (Pairof Any R)
+     (Pairof
+      (Pairof AnyField a)
+      (U (List (Pairof 'd AnyType) (Pairof 'e AnyType))
+         (Pairof
+          (Pairof 'b AnyType)
+          (Pairof
+           (Pairof 'c AnyType)
+           (Rec
+            R
+            (U (Pairof (Pairof 'w AnyType) R)
+               (Pairof
+                (Pairof 'x AnyType)
+                (Pairof (Pairof 'y AnyType) R)))))))))))
+
 #|
 
 (check-ann witness-value (Invariants)) ;; No invariants
