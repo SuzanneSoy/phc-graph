@@ -413,15 +413,16 @@ making a union of all paths, without factoring out common parts.
                                  (datum->syntax #'d '|.| #'d #'d)))
            (pattern ({~and d λdot} e …)
                     #:with full
-                    (cons #'d (add-between (syntax->list #'(e …))
-                                           (datum->syntax #'d '|.| #'d #'d)))))
+                    (cons (datum->syntax #'d '|.| #'d #'d)
+                          (add-between (syntax->list #'(e …))
+                                       (datum->syntax #'d '|.| #'d #'d)))))
          (define-syntax ~dot-ish
            (pattern-expander
             (λ (stx)
               (syntax-case stx ()
                 [(_ pat …)
                  #'(~and x:dot-ish
-                         (~parse (pat …) #'x))]))))
+                         (~parse (pat …) #'x.full))]))))
 
          (define (match-id rx id)
            (let ([m (regexp-match rx (identifier→string id))])
@@ -444,16 +445,14 @@ making a union of all paths, without factoring out common parts.
            #:attributes (τ)
            (pattern {~rx-id #px"^:([^:]+)$" τ}))
          (define-syntax-class π-elements
-           #:literals (|.| *)
+           #:datum-literals (|.|)
+           #:attributes ([f 1] [τ 1])
+           (pattern (~dot-ish {~seq |.| :f+τ} …)))
+         (define-syntax-class sub-elements
+           #:literals (*) #:datum-literals (|.|)
+           #:attributes ([f 2] [τ 2] [sub 1])
            (pattern
-            (~dot-ish {~or {~seq |.| :f+τ} {~seq sub:π-elements *}} …)))
-         (define-syntax-class whole-π
-           #:literals (|.| *)
-           #:attributes ([f 1] [τ 1] [τ₀ 0])
-           (pattern
-            (~dot-ish {~optional fst:just-τ}
-                      {~or {~seq |.| :f+τ} {~seq sub:π-elements *}} …)
-            #:with τ₀ #'fst.τ)))]
+            ({~either :π-elements {~seq sub:sub-elements *}} …))))]
 
 @chunk[<parse>
        (define-type-expander (<~τ stx)
@@ -462,27 +461,35 @@ making a union of all paths, without factoring out common parts.
            [(_ f₀ . more)
             #'(f₀ (<~τ . more))]))
        (begin-for-syntax
-         (define-template-metafunction (generate-sub-π stx)
+         (define-template-metafunction generate-sub-π
            (syntax-parser
-             [(_ :π-elements after)
+             [(_ :sub-elements after)
               (template
-               (Rec R
+                (Rec R
                     (U (<~τ (?? (∀ (more) (generate-sub-π sub more))
-                                (∀ (more) (List* (Pairof (?? f AnyField)
+                                (∀ (more) (List* (Pairof (?? 'f AnyField)
                                                          (?? τ AnyType))
+                                                 …
                                                  more)))
                             …
                             R)
                        after)))])))
        (define-for-syntax parse-path
          (syntax-parser
-           [:whole-π
-            (template (Rec R (U (Pairof Any R) <π>)))]))]
+           [({~optional (~dot-ish fst-τ:just-τ {~seq |.| fst:f+τ} …)}
+             . :sub-elements)
+            (template (Rec R (U (Pairof Any R)
+                                (List* (?? (?@ (Pairof AnyField fst-τ.τ)
+                                               (Pairof (?? 'fst.f AnyField)
+                                                       (?? fst.τ AnyType))
+                                               …))
+                                       <π>))))]))]
 
 @chunk[<π>
-       (<~τ (?? (∀ (more) (List* (Pairof AnyField τ₀) more)))
-            (?? (∀ (more) (generate-sub-π sub more))
-                (∀ (more) (List* (Pairof (?? f AnyField) (?? τ AnyType)) more)))
+       (<~τ (?? (∀ (more) (generate-sub-π sub more))
+                (∀ (more) (List* (Pairof (?? 'f AnyField) (?? τ AnyType))
+                                 …
+                                 more)))
             …
             Null)]
 
@@ -592,7 +599,8 @@ Two sorts of paths inside (in)equality constraints:
                             syntax/parse/experimental/template)
                 (for-meta 2 racket/base)
                 (for-meta 2 phc-toolkit/untyped/aliases)
-                (for-meta 3 racket/base))
+                (for-meta 3 racket/base)
+                "dot-lang.rkt")
 
        ;; For testing:
        (provide Invariants
@@ -603,7 +611,8 @@ Two sorts of paths inside (in)equality constraints:
                 Target
                 NonTarget
                 ε
-                witness-value)
+                witness-value
+                (for-syntax parse-path))
 
        <parse>
 

@@ -2,7 +2,20 @@
 
 (require (lib "phc-graph/invariants-phantom.hl.rkt")
          "util.rkt"
+         phc-graph/dot-lang
          phc-toolkit)
+
+(define-type-expander (Π stx)
+  (syntax-case stx ()
+    [(_ . π)
+     (parse-path #'π)]))
+(eval #'(#%top-interaction . (:type (Π (λdot a aa) ((λdot b c))* (λdot d e))))
+      (variable-reference->namespace (#%variable-reference)))
+(struct a ()); the field.
+(eval #'(#%top-interaction . (:type (Π (dot :a aa) ((λdot b c))* (λdot d e))))
+      (variable-reference->namespace (#%variable-reference)))
+(eval #'(#%top-interaction . (:type (Π (dot :a) ((λdot b c))* (λdot d e))))
+      (variable-reference->namespace (#%variable-reference)))
 
 #|
 
