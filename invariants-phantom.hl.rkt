@@ -178,9 +178,9 @@ a node with a weaker property is passed.
 @chunk[<structural-draft>
        (code:comment "Draft ideas")
        
-       (struct ∈ ())
-       (struct ≡ ())
-       (struct ∉ ())
+       (struct inv∈ ())
+       (struct inv≡ ())
+       (struct inv∉ ())
 
        ;(List Rel From Path1 Path2)
        (List ≡ ANodeName (List f1 f2) (List))
@@ -465,7 +465,7 @@ making a union of all paths, without factoring out common parts.
            (syntax-parser
              [(_ :sub-elements after)
               (template
-                (Rec R
+               (Rec R
                     (U (<~τ (?? (∀ (more) (generate-sub-π sub more))
                                 (∀ (more) (List* (Pairof (?? 'f AnyField)
                                                          (?? τ AnyType))
@@ -474,10 +474,10 @@ making a union of all paths, without factoring out common parts.
                             …
                             R)
                        after)))])))
-       (define-for-syntax parse-path
+       (define-type-expander Π
          (syntax-parser
-           [({~optional (~dot-ish fst-τ:just-τ {~seq |.| fst:f+τ} …)}
-             . :sub-elements)
+           [(_ {~optional (~dot-ish fst-τ:just-τ {~seq |.| fst:f+τ} …)}
+               . :sub-elements)
             (template (Rec R (U (Pairof Any R)
                                 (List* (?? (?@ (Pairof AnyField fst-τ.τ)
                                                (Pairof (?? 'fst.f AnyField)
@@ -493,6 +493,19 @@ making a union of all paths, without factoring out common parts.
             …
             Null)]
 
+@chunk[<Invariant>
+       (define-type-expander Invariant
+         (syntax-parser
+           #:literals (≡ ≢ ∈ ∉ ∋ ∌)
+           ;; For ≡ and ≢, use (U l r) because they are symmetric
+           [(_ π₁ … ≡ π₂ …) #`(inv≡ (U (Π π₁ …) (Π π₂ …)))]
+           [(_ π₁ … ≢ π₂ …) #`(inv≢ (U (Π π₁ …) (Π π₂ …)))]
+           [(_ π₁ … ∈ π₂ …) #`(inv∈ (Pairof (Π π₁ …) (Π π₂ …)))]
+           [(_ π₁ … ∋ π₂ …) #`(inv∈ (Pairof (Π π₂ …) (Π π₁ …)))]
+           [(_ π₁ … ∉ π₂ …) #`(inv≢ (Pairof (Π π₁ …) (Π π₂ … ?)))]
+           [(_ π₁ … ∌ π₂ …) #`(inv≢ (Pairof (Π π₂ …) (Π π₁ … ?)))]
+           ))]
+
 @subsubsection{Comparison operator tokens}
 
 We define some tokens which will be used to identify the operator which
@@ -501,9 +514,22 @@ relates two nodes in the graph.
 @chunk[<comparison-operators>
        (struct (A) inv≡ ([a : A]))
        (struct (A) inv≢ ([a : A]))
-       ;(struct inv∈ ()) ;; Can be expressed in terms of ≡
+       (struct (A) inv∈ ([a : A]))
        ;(struct inv∉ ()) ;; Can be expressed in terms of ≢
-       ]
+
+       (module literals typed/racket
+         (define-syntax-rule (define-literals name ...)
+           (begin
+             (provide name ...)
+             (define-syntax name
+               (λ (stx)
+                 (raise-syntax-error 'name
+                                     "Can only be used in special contexts"
+                                     stx)))
+             ...))
+         
+         (define-literals ≡ ≢ ∈ ∉ ∋ ∌))
+       (require 'literals)]
 
 @CHUNK[<≡>
        (define-for-syntax (relation inv)
@@ -518,8 +544,8 @@ relates two nodes in the graph.
                         (Pairof (Cycle r-pre-b …)
                                 (Cycle post-b …))))]))
 
-       (define-type-expander ≡ (relation #'inv≡))
-       (define-type-expander ≢ (relation #'inv≢))]
+       (define-type-expander ≡x (relation #'inv≡))
+       (define-type-expander ≢x (relation #'inv≢))]
 
 @chunk[<cycles>
        (struct ε () #:transparent)
@@ -573,21 +599,21 @@ relates two nodes in the graph.
 @; elements of {a,x} × {b,c}, but we only want three out of these four.
 
 @;{
-Two sorts of paths inside (in)equality constraints:
+ Two sorts of paths inside (in)equality constraints:
 
-@itemlist[
+ @itemlist[
  @item{those anchored on a node, stating that
-  @$${
-   ∀\ \textit{node} : \textit{NodeType},\quad
-   \textit{node}.\textit{path}₁ ≡ \textit{node}.\textit{path}₂}}
+   @$${
+    ∀\ \textit{node} : \textit{NodeType},\quad
+    \textit{node}.\textit{path}₁ ≡ \textit{node}.\textit{path}₂}}
  @item{those not anchored on a node, stating that
-  @$${
-   \begin{array}{c}
-   ∀\ \textit{node}₁ : \textit{NodeType}₁,\quad
-   ∀\ \textit{node}₂ : \textit{NodeType}₂,\\
-   \textit{node}₁.\textit{path}₁ ≡ \textit{node}₂.\textit{path}₂
-   \end{array}}}]
- }
+   @$${
+    \begin{array}{c}
+    ∀\ \textit{node}₁ : \textit{NodeType}₁,\quad
+    ∀\ \textit{node}₂ : \textit{NodeType}₂,\\
+    \textit{node}₁.\textit{path}₁ ≡ \textit{node}₂.\textit{path}₂
+    \end{array}}}]
+}
 
 @subsection{Putting it all together}
 
@@ -602,9 +628,12 @@ Two sorts of paths inside (in)equality constraints:
                 (for-meta 3 racket/base)
                 "dot-lang.rkt")
 
+       (provide ≡ ≢ ∈ ∉ ∋ ∌)
+       
        ;; For testing:
        (provide Invariants
-                ≡
+                ≡x
+                ≢x
                 inv≡
                 inv≢
                 Or
@@ -612,9 +641,10 @@ Two sorts of paths inside (in)equality constraints:
                 NonTarget
                 ε
                 witness-value
-                (for-syntax parse-path)
+                Π
                 AnyType
-                AnyField)
+                AnyField
+                Invariant)
 
        <parse>
 
@@ -622,4 +652,5 @@ Two sorts of paths inside (in)equality constraints:
        <grouping-invariants>
        <cycles>
        <comparison-operators>
+       <Invariant>
        <≡>]

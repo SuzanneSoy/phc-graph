@@ -5,11 +5,6 @@
          phc-graph/dot-lang
          phc-toolkit)
 
-(define-type-expander (Π stx)
-  (syntax-case stx ()
-    [(_ . π)
-     (parse-path #'π)]))
-
 (check-same-type
  (Π (λdot a aa) ((λdot b c))* (λdot d e))
  (Rec
@@ -70,23 +65,63 @@
                 (Pairof 'x AnyType)
                 (Pairof (Pairof 'y AnyType) R)))))))))))
 
-#|
+;; TODO: test with deeper nesting of ()*
+
+(check-same-type
+ (Invariant (dot :a) ((λdot b c) ((λdot w)) * (λdot x y))* (λdot d e)
+            ≡
+            (dot :a) ((λdot b c))* (λdot d e))
+ (inv≡
+  (U (Rec
+      R
+      (U (Pairof Any R)
+         (Pairof
+          (Pairof AnyField a)
+          (Rec
+           R
+           (U (List (Pairof 'd AnyType) (Pairof 'e AnyType))
+              (Pairof (Pairof 'b AnyType) (Pairof (Pairof 'c AnyType) R)))))))
+     (Rec
+      R
+      (U (Pairof Any R)
+         (Pairof
+          (Pairof AnyField a)
+          (U (List (Pairof 'd AnyType) (Pairof 'e AnyType))
+             (Pairof
+              (Pairof 'b AnyType)
+              (Pairof
+               (Pairof 'c AnyType)
+               (Rec
+                R
+                (U (Pairof (Pairof 'w AnyType) R)
+                   (Pairof
+                    (Pairof 'x AnyType)
+                    (Pairof (Pairof 'y AnyType) R)))))))))))))
+
+(check-same-type
+ (Invariant (dot :a) ((λdot b c) ((λdot w)) * (λdot x y))* (λdot d e)
+            ∈
+            (dot :a) ((λdot b c))* (λdot d e))
+ (Invariant (dot :a) ((λdot b c))* (λdot d e)
+            ∋
+            (dot :a) ((λdot b c) ((λdot w)) * (λdot x y))* (λdot d e)))
+
 
 (check-ann witness-value (Invariants)) ;; No invariants
-(check-ann witness-value (Invariants (≡ (_ a) (_ a b c))))
+(check-ann witness-value (Invariants (≡x (_ a) (_ a b c))))
 
-(check-a-stronger-than-b (Invariants (≡ (_ a) (_ a b c)))
+(check-a-stronger-than-b (Invariants (≡x (_ a) (_ a b c)))
                          (Invariants))
 
-(check-a-same-as-b (Invariants (≡ (_ a) (_ a b c)))
-                   (Invariants (≡ (_ a b c) (_ a))))
+(check-a-same-as-b (Invariants (≡x (_ a) (_ a b c)))
+                   (Invariants (≡x (_ a b c) (_ a))))
 
-(check-a-stronger-than-b (Invariants (≡ (_) (_ b c))
-                                     (≡ (_) (_ b d)))
-                         (Invariants (≡ (_) (_ b c))))
-(check-a-stronger-than-b (Invariants (≡ (_) (_ b d))
-                                     (≡ (_) (_ b c)))
-                         (Invariants (≡ (_) (_ b c))))
+(check-a-stronger-than-b (Invariants (≡x (_) (_ b c))
+                                     (≡x (_) (_ b d)))
+                         (Invariants (≡x (_) (_ b c))))
+(check-a-stronger-than-b (Invariants (≡x (_) (_ b d))
+                                     (≡x (_) (_ b c)))
+                         (Invariants (≡x (_) (_ b c))))
 
 ;; ∀ .b.d(.a.b.>d)* of length ≥ 5
 ;; is stronger than
@@ -94,46 +129,12 @@
 ;; as the elements of the latter are included in the former, but
 ;; the first element (length = 5) is missing in the latter, so the
 ;; former constrains more paths.
-(check-a-stronger-than-b (Invariants (≡ (_)
-                                        (_ b d ↙ a b (d))))
-                         (Invariants (≡ (_)
-                                        (_ b d a b d ↙ a b (d)))))
+(check-a-stronger-than-b (Invariants (≡x (_)
+                                         (_ b d ↙ a b (d))))
+                         (Invariants (≡x (_)
+                                         (_ b d a b d ↙ a b (d)))))
 
-(check-a-stronger-than-b (Invariants (≡ (_)
-                                        (_ a b c ↙ d (e))))
-                         (Invariants (≡ (_)
-                                        (_ a b c d e))))
-|#
-
-
-(check-ann witness-value (Invariants)) ;; No invariants
-(check-ann witness-value (Invariants (≡ (_ a) (_ a b c))))
-
-(check-a-stronger-than-b (Invariants (≡ (_ a) (_ a b c)))
-                         (Invariants))
-
-(check-a-same-as-b (Invariants (≡ (_ a) (_ a b c)))
-                   (Invariants (≡ (_ a b c) (_ a))))
-
-(check-a-stronger-than-b (Invariants (≡ (_) (_ b c))
-                                     (≡ (_) (_ b d)))
-                         (Invariants (≡ (_) (_ b c))))
-(check-a-stronger-than-b (Invariants (≡ (_) (_ b d))
-                                     (≡ (_) (_ b c)))
-                         (Invariants (≡ (_) (_ b c))))
-
-;; ∀ .b.d(.a.b.>d)* of length ≥ 5
-;; is stronger than
-;; ∀ .b.d(.a.b.>d)* of length ≥ 8
-;; as the elements of the latter are included in the former, but
-;; the first element (length = 5) is missing in the latter, so the
-;; former constrains more paths.
-(check-a-stronger-than-b (Invariants (≡ (_)
-                                        (_ b d ↙ a b (d))))
-                         (Invariants (≡ (_)
-                                        (_ b d a b d ↙ a b (d)))))
-
-(check-a-stronger-than-b (Invariants (≡ (_)
-                                        (_ a b c ↙ d (e))))
-                         (Invariants (≡ (_)
-                                        (_ a b c d e))))
+(check-a-stronger-than-b (Invariants (≡x (_)
+                                         (_ a b c ↙ d (e))))
+                         (Invariants (≡x (_)
+                                         (_ a b c d e))))
