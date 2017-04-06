@@ -612,7 +612,9 @@ Two sorts of paths inside (in)equality constraints:
                 NonTarget
                 ε
                 witness-value
-                (for-syntax parse-path))
+                (for-syntax parse-path)
+                AnyType
+                AnyField)
 
        <parse>
 

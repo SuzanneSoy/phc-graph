@@ -9,13 +9,47 @@
   (syntax-case stx ()
     [(_ . π)
      (parse-path #'π)]))
-(eval #'(#%top-interaction . (:type (Π (λdot a aa) ((λdot b c))* (λdot d e))))
-      (variable-reference->namespace (#%variable-reference)))
+
+(check-same-type
+ (Π (λdot a aa) ((λdot b c))* (λdot d e))
+ (Rec
+  R
+  (U (Pairof Any R)
+     (Pairof
+      (Pairof 'a AnyType)
+      (Pairof
+       (Pairof 'aa AnyType)
+       (Rec
+        R
+        (U (Pairof
+            (Pairof 'b AnyType)
+            (Pairof (Pairof 'c AnyType) R))
+           (List (Pairof 'd AnyType) (Pairof 'e AnyType)))))))))
 (struct a ()); the field.
-(eval #'(#%top-interaction . (:type (Π (dot :a aa) ((λdot b c))* (λdot d e))))
-      (variable-reference->namespace (#%variable-reference)))
-(eval #'(#%top-interaction . (:type (Π (dot :a) ((λdot b c))* (λdot d e))))
-      (variable-reference->namespace (#%variable-reference)))
+(check-same-type
+ (Π (dot :a aa) ((λdot b c))* (λdot d e))
+ (Rec
+  R
+  (U (Pairof Any R)
+     (Pairof
+      (Pairof AnyField a)
+      (Pairof
+       (Pairof 'aa AnyType)
+       (Rec
+        R
+        (U (List (Pairof 'd AnyType) (Pairof 'e AnyType))
+           (Pairof (Pairof 'b AnyType) (Pairof (Pairof 'c AnyType) R)))))))))
+(check-same-type
+ (Π (dot :a) ((λdot b c))* (λdot d e))
+ (Rec
+  R
+  (U (Pairof Any R)
+     (Pairof
+      (Pairof AnyField a)
+      (Rec
+       R
+       (U (List (Pairof 'd AnyType) (Pairof 'e AnyType))
+          (Pairof (Pairof 'b AnyType) (Pairof (Pairof 'c AnyType) R))))))))
 
 #|
 
