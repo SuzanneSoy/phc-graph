@@ -22,8 +22,8 @@
             (Pairof (Pairof 'c AnyType) R2))
            (List (Pairof 'd AnyType) (Pairof 'e AnyType)))))))))
 
-(struct a ()); the node.
-(struct b ()); the node.
+(struct a AnyType ()); the node type a.
+(struct b AnyType ()); the node type b.
 
 (check-same-type
  (Π :a.aa(.b.c)*.d.e)
@@ -75,68 +75,7 @@
 
 (check-same-type
  (Invariant :a(.b.c(.w)*.x.y)*.d.e ≡ :a(.b.c)*.d.e)
- (U (inv≡
-     (Pairof
-      (Rec
-       R1
-       (U (Pairof Any R1)
-          (Pairof
-           (Pairof AnyField a)
-           (Rec
-            R2
-            (U (List (Pairof 'd AnyType) (Pairof 'e AnyType))
-               (Pairof
-                (Pairof 'b AnyType)
-                (Pairof (Pairof 'c AnyType) R2)))))))
-      (Rec
-       R1
-       (U (Pairof Any R1)
-          (Pairof
-           (Pairof AnyField a)
-           (Rec
-            R2
-            (U (List (Pairof 'd AnyType) (Pairof 'e AnyType))
-               (Pairof
-                (Pairof 'b AnyType)
-                (Pairof
-                 (Pairof 'c AnyType)
-                 (Rec
-                  R3
-                  (U (Pairof (Pairof 'w AnyType) R3)
-                     (Pairof
-                      (Pairof 'x AnyType)
-                      (Pairof (Pairof 'y AnyType) R2)))))))))))))
-    (inv≡
-     (Pairof
-      (Rec
-       R1
-       (U (Pairof Any R1)
-          (Pairof
-           (Pairof AnyField a)
-           (Rec
-            R2
-            (U (List (Pairof 'd AnyType) (Pairof 'e AnyType))
-               (Pairof
-                (Pairof 'b AnyType)
-                (Pairof
-                 (Pairof 'c AnyType)
-                 (Rec
-                  R3
-                  (U (Pairof (Pairof 'w AnyType) R3)
-                     (Pairof
-                      (Pairof 'x AnyType)
-                      (Pairof (Pairof 'y AnyType) R2)))))))))))
-      (Rec
-       R1
-       (U (Pairof Any R1)
-          (Pairof
-           (Pairof AnyField a)
-           (Rec
-            R2
-            (U (List (Pairof 'd AnyType) (Pairof 'e AnyType))
-               (Pairof
-                (Pairof 'b AnyType)
-                (Pairof (Pairof 'c AnyType) R2)))))))))))
+ (Invariant :a(.b.c(.w)*.x.y)*.d.e ≡ :a(.b.c)*.d.e))
 
 (check-same-type
  (Invariant :a(.b.c(.w)*.x.y)*.d.e
@@ -175,3 +114,30 @@
 (check-a-stronger-than-b (Invariants (: ≡ .a.b.c(.d.e)*))
                          (Invariants (: ≡ .a.b.c.d.e)))
 
+
+(check-a-stronger-than-b (Invariants (.l ≥ (+ (length .a.b.c(.d.e)*) 3)))
+                         (Invariants (.l ≥ (+ (length .a.b.c(.d.e)*) 2))))
+
+(check-a-stronger-than-b (Invariants (.l ≥ (+ (length .a.b.c(.d.e)*) 1)))
+                         (Invariants (.l ≥ (length .a.b.c(.d.e)*))))
+
+(check-a-stronger-than-b (Invariants (.l ≤ (+ (length .a.b.c(.d.e)*) 2)))
+                         (Invariants (.l ≤ (+ (length .a.b.c(.d.e)*) 3))))
+
+(check-a-stronger-than-b (Invariants (.l ≤ (length .a.b.c(.d.e)*)))
+                         (Invariants (.l ≤ (+ (length .a.b.c(.d.e)*) 1))))
+
+(check-a-stronger-than-b (Invariants (.l = (length .a.b.c(.d.e)*)))
+                         (Invariants (.l ≥ (length .a.b.c(.d.e)*))))
+
+(check-a-stronger-than-b (Invariants (.l = (+ (length .a.b.c(.d.e)*) 1)))
+                         (Invariants (.l ≤ (+ (length .a.b.c(.d.e)*) 1))))
+
+(check-same-type (Invariants (.l = (length .a.b.c(.d.e)*)))
+                 (Invariants (.l = (+ (length .a.b.c(.d.e)*) 0))))
+
+(check-a-stronger-than-b (Invariants (:a.l ≥ (+ (length :a.f.g) 3))
+                                     (:a ≡ :a.f.h)
+                                     (:a ∉ :a.f.g))
+                         (Invariants (:a.l ≥ (+ (length :a.f.g) 2))
+                                     (:a ≢ :a.f.g.x)))

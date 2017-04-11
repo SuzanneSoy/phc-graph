@@ -423,7 +423,8 @@ making a union of all paths, without factoring out common parts.
            #:attributes (f τ)
            (pattern {~rx-id #px"^([^:]+):([^:]+)$" f τ})
            (pattern {~rx-id #px"^([^:]+)$" f} #:with ({~optional τ}) #'())
-           (pattern {~rx-id #px"^:([^:]+)$" τ} #:with ({~optional f}) #'()))
+           (pattern {~rx-id #px"^:([^:]+)$" τ} #:with ({~optional f}) #'())
+           (pattern {~rx-id #px"^:$"} #:with ({~optional (f τ)}) #'()))
          (define-syntax-class just-τ
            #:attributes (τ)
            (pattern {~rx-id #px"^:([^:]+)$" τ}))
@@ -471,9 +472,9 @@ making a union of all paths, without factoring out common parts.
            #:literals (#%dotted-id #%dot-separator)
            [(_ {~optional (~or (#%dotted-id fst-τ:just-τ
                                             {~seq #%dot-separator fst:f+τ} …)
+                               {~datum :}
                                (~and fst-τ:just-τ
-                                     {~parse (fst:f+τ …) #'()})
-                               {~datum :})}
+                                     {~parse (fst:f+τ …) #'()}))}
                . :sub-elements)
             #:with R (gensym 'R)
             (template/top-loc
@@ -494,19 +495,51 @@ making a union of all paths, without factoring out common parts.
             Null)]
 
 @chunk[<Invariant>
-       ;; TODO: /top-loc everywhere
        (define-type-expander Invariant
          (syntax-parser
-           #:literals (≡ ≢ ∈ ∉ ∋ ∌)
-           [(_ π₁ … ≡ π₂ …) #`(U (inv≡ (Pairof (Π π₁ …) (Π π₂ …)))
-                                 (inv≡ (Pairof (Π π₂ …) (Π π₁ …))))]
-           [(_ π₁ … ≢ π₂ …) #`(U (inv≢ (Pairof (Π π₁ …) (Π π₂ …)))
-                                 (inv≢ (Pairof (Π π₂ …) (Π π₁ …))))]
-           [(_ π₁ … ∈ π₂ …) #`(inv∈ (Pairof (Π π₁ …) (Π π₂ …)))]
-           [(_ π₁ … ∋ π₂ …) #`(inv∈ (Pairof (Π π₂ …) (Π π₁ …)))]
-           [(_ π₁ … ∉ π₂ …) #`(inv≢ (Pairof (Π π₁ …) (Π π₂ … ?)))]
-           [(_ π₁ … ∌ π₂ …) #`(inv≢ (Pairof (Π π₂ …) (Π π₁ … ?)))]
-           ))]
+           #:literals (≡ ≢ ∈ ∉ ∋ ∌ = ≤ ≥ length +)
+           [(_ π₁ … ≡ π₂ …) #`(U (inv≡ (Π π₁ …) (Π π₂ …))
+                                 (inv≡ (Π π₂ …) (Π π₁ …)))]
+           [(_ π₁ … ≢ π₂ …) #`(U (inv≢ (Π π₁ …) (Π π₂ …))
+                                 (inv≢ (Π π₂ …) (Π π₁ …)))]
+           [(_ π₁ … ∈ π₂ …) #`(inv∈ (Π π₁ …) (Π π₂ …))]
+           [(_ π₁ … ∋ π₂ …) #`(inv∈ (Π π₂ …) (Π π₁ …))]
+           [(_ π₁ … ∉ π₂ …) 
+            #`(U (inv≢ (Π π₁ …) (Π π₂ … (#%dotted-id #%dot-separator :)))
+                 (inv≢ (Π π₂ … (#%dotted-id #%dot-separator :)) (Π π₁ …)))]
+           [(_ π₁ … ∌ π₂ …)
+            #`(U (inv≢ (Π π₂ …) (Π π₁ … (#%dotted-id #%dot-separator :)))
+                 (inv≢ (Π π₁ … (#%dotted-id #%dot-separator :)) (Π π₂ …)))]
+           ;; TODO: = should use a combination of ≤ and ≥
+           [(_ π₁ …
+               {~and op {~or = ≤ ≥}}
+               (~or (+ (length π₂ …) n:nat)
+                    {~and (length π₂ …) {~parse n 0}}))
+            #:with opN (syntax-case #'op (= ≤ ≥)
+                         [= #'=N]
+                         [≤ #'≤N]
+                         [≥ #'≥N])
+            #`(→ (invLength (opN n) (Π π₁ …) (Π π₂ …)) Void)]))]
+
+@CHUNK[<=>
+       (define-type (P A B) (Promise (Pairof A B)))
+       (define-type a 'a)
+       (define-type x 'x)
+       (define-type ax (U a x))
+       (define-type x* (Rec R (P x R)))
+       (define-type ax* (Rec R (P ax R)))
+       (define-type-expander =N
+         (syntax-parser
+           [(_ 0) #'x*]
+           [(_ n:nat) #`(P a (=N #,(sub1 (syntax-e #'n))))]))
+       (define-type-expander ≥N
+         (syntax-parser
+           [(_ 0) #'ax*]
+           [(_ n:nat) #`(P a (≥N #,(sub1 (syntax-e #'n))))]))
+       (define-type-expander ≤N
+         (syntax-parser
+           [(_ 0) #'x*]
+           [(_ n:nat) #`(P ax (≤N #,(sub1 (syntax-e #'n))))]))]
 
 @chunk[<Invariants>
        (define-type-expander Invariants
@@ -515,7 +548,7 @@ making a union of all paths, without factoring out common parts.
             #`(→ (U Or (Invariant . inv) …) Void)]))]
 
 @chunk[<Any*>
-       (struct AnyField () #:transparent)
+       (define-type AnyField Symbol);(struct AnyField () #:transparent)
        (struct AnyType () #:transparent)
        (define-type ε (Π))]
 
@@ -525,9 +558,10 @@ We define some tokens which will be used to identify the operator which
 relates two nodes in the graph.
 
 @chunk[<comparison-operators>
-       (struct (A) inv≡ ([a : A]))
-       (struct (A) inv≢ ([a : A]))
-       (struct (A) inv∈ ([a : A]))
+       (struct (A B) inv≡ ([a : A] [b : B]))
+       (struct (A B) inv≢ ([a : A] [b : B]))
+       (struct (A B) inv∈ ([a : A] [b : B]))
+       (struct (A B C) invLength ([a : A] [b : B] [c : C]))
        ;(struct inv∉ ()) ;; Can be expressed in terms of ≢
 
        (module literals typed/racket
@@ -541,7 +575,7 @@ relates two nodes in the graph.
                                      stx)))
              ...))
          
-         (define-literals ≡ ≢ ∈ ∉ ∋ ∌))
+         (define-literals ≡ ≢ ∈ ∉ ∋ ∌ ≥ ≤))
        (require 'literals)]
 
 @CHUNK[<≡>
@@ -645,12 +679,10 @@ relates two nodes in the graph.
          (define-syntax-rule (template/top-loc loc e)
            (quasisyntax/top-loc loc #,(template e))))
 
-       (provide ≡ ≢ ∈ ∉ ∋ ∌)
+       (provide ≡ ≢ ∈ ∉ ∋ ∌ ≥ ≤)
        
        ;; For testing:
        (provide Invariants
-                ≡x
-                ≢x
                 inv≡
                 inv≢
                 Or
@@ -666,11 +698,9 @@ relates two nodes in the graph.
        <parse>
 
        <witness-value>
-       ;<grouping-invariants>
-       ;<cycles>
        <Any*>
        <comparison-operators>
        <Invariant>
        <Invariants>
        <Or>
-       <≡>]
+       <=>]
