@@ -331,8 +331,10 @@ invariants, and therefore use a second nested function type to flip again the
 variance direction. We always include the @racket[Or] element in the union, to
 avoid ever having an empty union.
 
+@chunk[<Or>
+       (struct Or ())]
+
 @chunk[<grouping-invariants>
-       (struct Or ())
        (define-type-expander (Invariants stx)
          (syntax-case stx ()
            [(_ invᵢ …)
@@ -405,25 +407,6 @@ making a union of all paths, without factoring out common parts.
 
 @chunk[<parse>
        (begin-for-syntax
-         (define-syntax-class dot-ish
-           #:literals (dot λdot)
-           (pattern ({~and d dot} e …)
-                    #:with full
-                    (add-between (syntax->list #'(e …))
-                                 (datum->syntax #'d '|.| #'d #'d)))
-           (pattern ({~and d λdot} e …)
-                    #:with full
-                    (cons (datum->syntax #'d '|.| #'d #'d)
-                          (add-between (syntax->list #'(e …))
-                                       (datum->syntax #'d '|.| #'d #'d)))))
-         (define-syntax ~dot-ish
-           (pattern-expander
-            (λ (stx)
-              (syntax-case stx ()
-                [(_ pat …)
-                 #'(~and x:dot-ish
-                         (~parse (pat …) #'x.full))]))))
-
          (define (match-id rx id)
            (let ([m (regexp-match rx (identifier→string id))])
              (and m (map (λ (%) (datum->syntax id (string->symbol %) id id))
@@ -445,25 +428,34 @@ making a union of all paths, without factoring out common parts.
            #:attributes (τ)
            (pattern {~rx-id #px"^:([^:]+)$" τ}))
          (define-syntax-class π-elements
-           #:datum-literals (|.|)
+           #:literals (#%dotted-id #%dot-separator)
            #:attributes ([f 1] [τ 1])
-           (pattern (~dot-ish {~seq |.| :f+τ} …)))
+           (pattern (#%dotted-id {~seq #%dot-separator :f+τ} …)))
+         (define-syntax-class extract-star
+           #:literals (* #%dotted-id)
+           (pattern (#%dotted-id {~and st *} . rest)
+                    #:with {extracted-star …} #'{st (#%dotted-id . rest)})
+           (pattern other
+                    #:with {extracted-star …} #'{other}))
          (define-syntax-class sub-elements
-           #:literals (*) #:datum-literals (|.|)
+           #:literals (* #%dot-separator)
            #:attributes ([f 2] [τ 2] [sub 1])
            (pattern
-            ({~either :π-elements {~seq sub:sub-elements *}} …))))]
+            (:extract-star …)
+            #:with ({~either :π-elements {~seq sub:sub-elements *}} …)
+            #|  |# #'(extracted-star … …))))]
 
 @chunk[<parse>
-       (define-type-expander (<~τ stx)
-         (syntax-case stx ()
+       (define-type-expander <~τ
+         (syntax-parser
            [(_ τ) #'τ]
            [(_ f₀ . more)
-            #'(f₀ (<~τ . more))]))
+            #`(f₀ (<~τ . more))]))
        (begin-for-syntax
          (define-template-metafunction generate-sub-π
            (syntax-parser
              [(_ :sub-elements after)
+              #:with R (gensym 'R)
               (template
                (Rec R
                     (U (<~τ (?? (∀ (more) (generate-sub-π sub more))
@@ -476,14 +468,22 @@ making a union of all paths, without factoring out common parts.
                        after)))])))
        (define-type-expander Π
          (syntax-parser
-           [(_ {~optional (~dot-ish fst-τ:just-τ {~seq |.| fst:f+τ} …)}
+           #:literals (#%dotted-id #%dot-separator)
+           [(_ {~optional (~or (#%dotted-id fst-τ:just-τ
+                                            {~seq #%dot-separator fst:f+τ} …)
+                               (~and fst-τ:just-τ
+                                     {~parse (fst:f+τ …) #'()})
+                               {~datum :})}
                . :sub-elements)
-            (template (Rec R (U (Pairof Any R)
-                                (List* (?? (?@ (Pairof AnyField fst-τ.τ)
-                                               (Pairof (?? 'fst.f AnyField)
-                                                       (?? fst.τ AnyType))
-                                               …))
-                                       <π>))))]))]
+            #:with R (gensym 'R)
+            (template/top-loc
+             this-syntax
+             (Rec R (U (Pairof Any R)
+                       (List* (?? (?@ (Pairof AnyField fst-τ.τ)
+                                      (Pairof (?? 'fst.f AnyField)
+                                              (?? fst.τ AnyType))
+                                      …))
+                              <π>))))]))]
 
 @chunk[<π>
        (<~τ (?? (∀ (more) (generate-sub-π sub more))
@@ -494,17 +494,30 @@ making a union of all paths, without factoring out common parts.
             Null)]
 
 @chunk[<Invariant>
+       ;; TODO: /top-loc everywhere
        (define-type-expander Invariant
          (syntax-parser
            #:literals (≡ ≢ ∈ ∉ ∋ ∌)
-           ;; For ≡ and ≢, use (U l r) because they are symmetric
-           [(_ π₁ … ≡ π₂ …) #`(inv≡ (U (Π π₁ …) (Π π₂ …)))]
-           [(_ π₁ … ≢ π₂ …) #`(inv≢ (U (Π π₁ …) (Π π₂ …)))]
+           [(_ π₁ … ≡ π₂ …) #`(U (inv≡ (Pairof (Π π₁ …) (Π π₂ …)))
+                                 (inv≡ (Pairof (Π π₂ …) (Π π₁ …))))]
+           [(_ π₁ … ≢ π₂ …) #`(U (inv≢ (Pairof (Π π₁ …) (Π π₂ …)))
+                                 (inv≢ (Pairof (Π π₂ …) (Π π₁ …))))]
            [(_ π₁ … ∈ π₂ …) #`(inv∈ (Pairof (Π π₁ …) (Π π₂ …)))]
            [(_ π₁ … ∋ π₂ …) #`(inv∈ (Pairof (Π π₂ …) (Π π₁ …)))]
            [(_ π₁ … ∉ π₂ …) #`(inv≢ (Pairof (Π π₁ …) (Π π₂ … ?)))]
            [(_ π₁ … ∌ π₂ …) #`(inv≢ (Pairof (Π π₂ …) (Π π₁ … ?)))]
            ))]
+
+@chunk[<Invariants>
+       (define-type-expander Invariants
+         (syntax-parser
+           [(_ inv …)
+            #`(→ (U Or (Invariant . inv) …) Void)]))]
+
+@chunk[<Any*>
+       (struct AnyField () #:transparent)
+       (struct AnyType () #:transparent)
+       (define-type ε (Π))]
 
 @subsubsection{Comparison operator tokens}
 
@@ -551,9 +564,6 @@ relates two nodes in the graph.
        (struct ε () #:transparent)
        (struct (T) Target ([x : T]) #:transparent)
        (struct (T) NonTarget Target () #:transparent)
-
-       (struct AnyField () #:transparent)
-       (struct AnyType () #:transparent)
        
        (define-type-expander Cycle
          (syntax-parser
@@ -617,16 +627,23 @@ relates two nodes in the graph.
 
 @subsection{Putting it all together}
 
-@chunk[<*>
-       (require (for-syntax racket/base
+@CHUNK[<*>
+       (require (only-in typed/dotlambda #%dotted-id #%dot-separator)
+                "dot-lang.rkt"
+                (for-syntax racket/base
                             racket/list
                             phc-toolkit/untyped
                             syntax/parse
                             syntax/parse/experimental/template)
                 (for-meta 2 racket/base)
                 (for-meta 2 phc-toolkit/untyped/aliases)
-                (for-meta 3 racket/base)
-                "dot-lang.rkt")
+                (for-meta 3 racket/base))
+
+       (begin-for-syntax
+         (define-syntax-rule (quasisyntax e)
+           (quasisyntax/top-loc this-syntax e))
+         (define-syntax-rule (template/top-loc loc e)
+           (quasisyntax/top-loc loc #,(template e))))
 
        (provide ≡ ≢ ∈ ∉ ∋ ∌)
        
@@ -637,8 +654,8 @@ relates two nodes in the graph.
                 inv≡
                 inv≢
                 Or
-                Target
-                NonTarget
+                ;Target
+                ;NonTarget
                 ε
                 witness-value
                 Π
@@ -649,8 +666,11 @@ relates two nodes in the graph.
        <parse>
 
        <witness-value>
-       <grouping-invariants>
-       <cycles>
+       ;<grouping-invariants>
+       ;<cycles>
+       <Any*>
        <comparison-operators>
        <Invariant>
+       <Invariants>
+       <Or>
        <≡>]

@@ -1,4 +1,5 @@
-#lang type-expander
+#lang typed/dotlambda
+(require type-expander)
 
 (require (lib "phc-graph/invariants-phantom.hl.rkt")
          "util.rkt"
@@ -6,122 +7,161 @@
          phc-toolkit)
 
 (check-same-type
- (Π (λdot a aa) ((λdot b c))* (λdot d e))
+ (Π .a.aa(.b.c)*.d.e)
  (Rec
-  R
-  (U (Pairof Any R)
+  R1
+  (U (Pairof Any R1)
      (Pairof
       (Pairof 'a AnyType)
       (Pairof
        (Pairof 'aa AnyType)
        (Rec
-        R
+        R2
         (U (Pairof
             (Pairof 'b AnyType)
-            (Pairof (Pairof 'c AnyType) R))
+            (Pairof (Pairof 'c AnyType) R2))
            (List (Pairof 'd AnyType) (Pairof 'e AnyType)))))))))
-(struct a ()); the field.
+
+(struct a ()); the node.
+(struct b ()); the node.
+
 (check-same-type
- (Π (dot :a aa) ((λdot b c))* (λdot d e))
+ (Π :a.aa(.b.c)*.d.e)
  (Rec
-  R
-  (U (Pairof Any R)
+  R1
+  (U (Pairof Any R1)
      (Pairof
       (Pairof AnyField a)
       (Pairof
        (Pairof 'aa AnyType)
        (Rec
-        R
+        R2
         (U (List (Pairof 'd AnyType) (Pairof 'e AnyType))
-           (Pairof (Pairof 'b AnyType) (Pairof (Pairof 'c AnyType) R)))))))))
+           (Pairof (Pairof 'b AnyType) (Pairof (Pairof 'c AnyType) R2)))))))))
 (check-same-type
- (Π (dot :a) ((λdot b c))* (λdot d e))
+ (Π :a(.b.c)*.d.e)
  (Rec
-  R
-  (U (Pairof Any R)
+  R1
+  (U (Pairof Any R1)
      (Pairof
       (Pairof AnyField a)
       (Rec
-       R
+       R2
        (U (List (Pairof 'd AnyType) (Pairof 'e AnyType))
-          (Pairof (Pairof 'b AnyType) (Pairof (Pairof 'c AnyType) R))))))))
+          (Pairof (Pairof 'b AnyType) (Pairof (Pairof 'c AnyType) R2))))))))
 
 (check-same-type
- (Π (dot :a) ((λdot b c) ((λdot w)) * (λdot x y))* (λdot d e))
+ (Π :a(.b.c(.w)*.x.y)*.d.e)
  (Rec
-  R
-  (U (Pairof Any R)
+  R1
+  (U (Pairof Any R1)
      (Pairof
       (Pairof AnyField a)
-      (U (List (Pairof 'd AnyType) (Pairof 'e AnyType))
-         (Pairof
-          (Pairof 'b AnyType)
+      (Rec
+       R2
+       (U (List (Pairof 'd AnyType) (Pairof 'e AnyType))
           (Pairof
-           (Pairof 'c AnyType)
-           (Rec
-            R
-            (U (Pairof (Pairof 'w AnyType) R)
-               (Pairof
-                (Pairof 'x AnyType)
-                (Pairof (Pairof 'y AnyType) R)))))))))))
+           (Pairof 'b AnyType)
+           (Pairof
+            (Pairof 'c AnyType)
+            (Rec
+             R3
+             (U (Pairof (Pairof 'w AnyType) R3)
+                (Pairof
+                 (Pairof 'x AnyType)
+                 (Pairof (Pairof 'y AnyType) R2))))))))))))
 
 ;; TODO: test with deeper nesting of ()*
 
 (check-same-type
- (Invariant (dot :a) ((λdot b c) ((λdot w)) * (λdot x y))* (λdot d e)
-            ≡
-            (dot :a) ((λdot b c))* (λdot d e))
- (inv≡
-  (U (Rec
-      R
-      (U (Pairof Any R)
-         (Pairof
-          (Pairof AnyField a)
-          (Rec
-           R
-           (U (List (Pairof 'd AnyType) (Pairof 'e AnyType))
-              (Pairof (Pairof 'b AnyType) (Pairof (Pairof 'c AnyType) R)))))))
-     (Rec
-      R
-      (U (Pairof Any R)
-         (Pairof
-          (Pairof AnyField a)
-          (U (List (Pairof 'd AnyType) (Pairof 'e AnyType))
-             (Pairof
-              (Pairof 'b AnyType)
-              (Pairof
-               (Pairof 'c AnyType)
-               (Rec
-                R
-                (U (Pairof (Pairof 'w AnyType) R)
-                   (Pairof
-                    (Pairof 'x AnyType)
-                    (Pairof (Pairof 'y AnyType) R)))))))))))))
+ (Invariant :a(.b.c(.w)*.x.y)*.d.e ≡ :a(.b.c)*.d.e)
+ (U (inv≡
+     (Pairof
+      (Rec
+       R1
+       (U (Pairof Any R1)
+          (Pairof
+           (Pairof AnyField a)
+           (Rec
+            R2
+            (U (List (Pairof 'd AnyType) (Pairof 'e AnyType))
+               (Pairof
+                (Pairof 'b AnyType)
+                (Pairof (Pairof 'c AnyType) R2)))))))
+      (Rec
+       R1
+       (U (Pairof Any R1)
+          (Pairof
+           (Pairof AnyField a)
+           (Rec
+            R2
+            (U (List (Pairof 'd AnyType) (Pairof 'e AnyType))
+               (Pairof
+                (Pairof 'b AnyType)
+                (Pairof
+                 (Pairof 'c AnyType)
+                 (Rec
+                  R3
+                  (U (Pairof (Pairof 'w AnyType) R3)
+                     (Pairof
+                      (Pairof 'x AnyType)
+                      (Pairof (Pairof 'y AnyType) R2)))))))))))))
+    (inv≡
+     (Pairof
+      (Rec
+       R1
+       (U (Pairof Any R1)
+          (Pairof
+           (Pairof AnyField a)
+           (Rec
+            R2
+            (U (List (Pairof 'd AnyType) (Pairof 'e AnyType))
+               (Pairof
+                (Pairof 'b AnyType)
+                (Pairof
+                 (Pairof 'c AnyType)
+                 (Rec
+                  R3
+                  (U (Pairof (Pairof 'w AnyType) R3)
+                     (Pairof
+                      (Pairof 'x AnyType)
+                      (Pairof (Pairof 'y AnyType) R2)))))))))))
+      (Rec
+       R1
+       (U (Pairof Any R1)
+          (Pairof
+           (Pairof AnyField a)
+           (Rec
+            R2
+            (U (List (Pairof 'd AnyType) (Pairof 'e AnyType))
+               (Pairof
+                (Pairof 'b AnyType)
+                (Pairof (Pairof 'c AnyType) R2)))))))))))
 
 (check-same-type
- (Invariant (dot :a) ((λdot b c) ((λdot w)) * (λdot x y))* (λdot d e)
+ (Invariant :a(.b.c(.w)*.x.y)*.d.e
             ∈
-            (dot :a) ((λdot b c))* (λdot d e))
- (Invariant (dot :a) ((λdot b c))* (λdot d e)
+            :a(.b.c)*.d.e)
+ (Invariant :a(.b.c)*.d.e
             ∋
-            (dot :a) ((λdot b c) ((λdot w)) * (λdot x y))* (λdot d e)))
+            :a(.b.c(.w)*.x.y)*.d.e))
 
+
+;;;
 
 (check-ann witness-value (Invariants)) ;; No invariants
-(check-ann witness-value (Invariants (≡x (_ a) (_ a b c))))
+(check-ann witness-value (Invariants (:a ≡ :a.b.c)))
 
-(check-a-stronger-than-b (Invariants (≡x (_ a) (_ a b c)))
+(check-a-stronger-than-b (Invariants (:a ≡ :a.b.c))
                          (Invariants))
-
-(check-a-same-as-b (Invariants (≡x (_ a) (_ a b c)))
-                   (Invariants (≡x (_ a b c) (_ a))))
-
-(check-a-stronger-than-b (Invariants (≡x (_) (_ b c))
-                                     (≡x (_) (_ b d)))
-                         (Invariants (≡x (_) (_ b c))))
-(check-a-stronger-than-b (Invariants (≡x (_) (_ b d))
-                                     (≡x (_) (_ b c)))
-                         (Invariants (≡x (_) (_ b c))))
+(check-a-same-as-b (Invariants (:a ≡ :a.b.c))
+                   (Invariants (:a.b.c ≡ :a)))
+(check-a-stronger-than-b (Invariants (: ≡ :b.c)
+                                     (: ≡ :b.d))
+                         (Invariants (: ≡ :b.c)))
+(check-a-stronger-than-b (Invariants (: ≡ :b.d)
+                                     (: ≡ :b.c))
+                         (Invariants (: ≡ :b.c)))
 
 ;; ∀ .b.d(.a.b.>d)* of length ≥ 5
 ;; is stronger than
@@ -129,12 +169,9 @@
 ;; as the elements of the latter are included in the former, but
 ;; the first element (length = 5) is missing in the latter, so the
 ;; former constrains more paths.
-(check-a-stronger-than-b (Invariants (≡x (_)
-                                         (_ b d ↙ a b (d))))
-                         (Invariants (≡x (_)
-                                         (_ b d a b d ↙ a b (d)))))
+(check-a-stronger-than-b (Invariants (: ≡ .b.d(.a.b.d)*))
+                         (Invariants (: ≡ .b.d.a.b.d(.a.b.d)*)))
 
-(check-a-stronger-than-b (Invariants (≡x (_)
-                                         (_ a b c ↙ d (e))))
-                         (Invariants (≡x (_)
-                                         (_ a b c d e))))
+(check-a-stronger-than-b (Invariants (: ≡ .a.b.c(.d.e)*))
+                         (Invariants (: ≡ .a.b.c.d.e)))
+

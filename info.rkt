@@ -16,7 +16,8 @@
                "remember"
                "extensible-parser-specifications"
                "subtemplate"
-               "stxparse-info"))
+               "stxparse-info"
+               "dotlambda"))
 (define build-deps '("scribble-lib"
                      "racket-doc"
                      "remember"
