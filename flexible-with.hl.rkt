@@ -1,17 +1,17 @@
-#lang aful/unhygienic hyper-literate type-expander/lang
+#lang hyper-literate #:♦ (dotlambda/unhygienic . type-expander/lang)
 
-@title[#:style manual-doc-style ;#:style (with-html5 manual-doc-style)
+♦title[#:style manual-doc-style ;#:style (with-html5 manual-doc-style)
        #:tag "flexible-with"
        #:tag-prefix "phc-graph/flexible-with"]{Flexible functional
  modification and extension of records}
 
-@(chunks-toc-prefix
+♦(chunks-toc-prefix
   '("(lib phc-graph/scribblings/phc-graph-implementation.scrbl)"
     "phc-graph/flexible-with"))
 
-@section{Type of a tree-record, with a hole}
+♦section{Type of a tree-record, with a hole}
 
-@CHUNK[<tree-type-with-replacement>
+♦CHUNK[<tree-type-with-replacement>
        (define-for-syntax (tree-type-with-replacement n last τ*)
          (define-values (next mod) (quotient/remainder n 2))
          (cond [(null? τ*) last]
@@ -24,23 +24,23 @@
                                             #`(Pairof #,(car τ*) #,last)
                                             (cdr τ*))]))]
 
-@section{Functionally updating a tree-record}
+♦section{Functionally updating a tree-record}
 
-@subsection{Adding and modifying fields}
+♦subsection{Adding and modifying fields}
 
 Since we only deal with functional updates of immutable records, modifying a
 field does little more than discarding the old value, and injecting the new
 value instead into the new, updated record.
 
 Adding a new field is done using the same exact operation: missing fields are
-denoted by a special value, @racket['NONE], while present fields are
-represented as instances of the polymorphic struct @racket[(Some T)]. Adding a
-new field is therefore as simple as discarding the old @racket['NONE] marker,
-and replacing it with the new value, wrapped with @racket[Some]. A field
-update would instead discard the old instance of @racket[Some], and replace it
+denoted by a special value, ♦racket['NONE], while present fields are
+represented as instances of the polymorphic struct ♦racket[(Some T)]. Adding a
+new field is therefore as simple as discarding the old ♦racket['NONE] marker,
+and replacing it with the new value, wrapped with ♦racket[Some]. A field
+update would instead discard the old instance of ♦racket[Some], and replace it
 with a new one.
 
-@CHUNK[<make-replace-in-tree-body>
+♦CHUNK[<make-replace-in-tree-body>
        (if (= i 1)
            #'(delay/pure/stateless replacement)
            (let* ([bits (to-bits i)]
@@ -55,7 +55,7 @@ with a new one.
                                  tree-thunk
                                  replacement))))]
 
-@CHUNK[<define-replace-in-tree>
+♦CHUNK[<define-replace-in-tree>
        (: replace-right (∀ (A B C R) (→ (→ (Promise B) R (Promise C))
                                         (Promise (Pairof A B))
                                         R
@@ -131,12 +131,12 @@ with a new one.
              (define (rm-name tree-thunk)
                (low-name tree-thunk 'NONE))))]
 
-@section{Auxiliary values}
+♦section{Auxiliary values}
 
 The following sections reuse a few values which are derived from the list of
 fields:
 
-@CHUNK[<utils>
+♦CHUNK[<utils>
        (define all-fields #'(field …))
        (define depth-above (ceiling-log2 (length (syntax->list #'(field …)))))
        (define offset (expt 2 depth-above))
@@ -157,9 +157,9 @@ fields:
                                   (stx-map (λ (f) (format-id f "u-with-~a" f))
                                            #'(field …)))))]
 
-@section{Type of a tree-record}
+♦section{Type of a tree-record}
 
-@CHUNK[<τ-tree-with-fields>
+♦CHUNK[<τ-tree-with-fields>
        (define-for-syntax (τ-tree-with-fields struct-fields fields)
          (define/with-syntax (struct-field …) struct-fields)
          (define/with-syntax (field …) fields)
@@ -171,7 +171,7 @@ fields:
                        [i (in-naturals)])
               (cons n (+ i offset)))))
          (define fields+indices
-           (sort (stx-map #λ(cons % (free-id-table-ref lookup %))
+           (sort (stx-map λ.(cons % (free-id-table-ref lookup %))
                           #'(struct-field …))
                  <
                  #:key cdr))
@@ -192,9 +192,9 @@ fields:
                               ,(f (add1 (* i 2))))))))
          (f 1))]
 
-@section{Conversion to and from record-trees}
+♦section{Conversion to and from record-trees}
 
-@CHUNK[<define-struct↔tree>
+♦CHUNK[<define-struct↔tree>
        (define-for-syntax (define-struct↔tree
                             offset all-fields τ* struct-name fields)
          (define/with-syntax (field …) fields)
@@ -208,7 +208,7 @@ fields:
                        [i (in-naturals)])
               (cons n (+ i offset)))))
          (define fields+indices
-           (sort (stx-map #λ(cons % (free-id-table-ref lookup %))
+           (sort (stx-map λ.(cons % (free-id-table-ref lookup %))
                           fields)
                  <
                  #:key cdr))
@@ -229,9 +229,9 @@ fields:
                (define tree (force tree-thunk))
                #,(convert-back-fields (* offset 2) fields+indices))))]
 
-@subsection{Creating a new tree-record}
+♦subsection{Creating a new tree-record}
 
-@CHUNK[<convert-fields>
+♦CHUNK[<convert-fields>
        (define-for-syntax (convert-fields up fields+indices)
          ;(displayln fields+indices)
          (define (f i)
@@ -248,12 +248,12 @@ fields:
          (f 1))]
 
 
-@subsection{Extracting all the fields from a tree-record}
+♦subsection{Extracting all the fields from a tree-record}
 
 We traverse the tree in preorder, and accumulate definitions naming the
 interesting subparts of the trees (those where there are fields).
 
-@CHUNK[<convert-back-fields>
+♦CHUNK[<convert-back-fields>
        (define-for-syntax (convert-back-fields up fields+indices)
          (define result '())
          (define definitions '())
@@ -292,20 +292,20 @@ interesting subparts of the trees (those where there are fields).
          (f 1 #'tree)
          #`(begin #,@definitions (values . #,(reverse result))))]
 
-@section{Defining the converters and accessors for each known record type}
+♦section{Defining the converters and accessors for each known record type}
 
-@CHUNK[<define-trees>
+♦CHUNK[<define-trees>
        (define-for-syntax (define-trees stx)
          (syntax-case stx ()
            [(bt-fields-id (field …) [struct struct-field …] …)
             (let ()
               <utils>
-              (define ∀-types (map #λ(format-id #'here "τ~a" %)
+              (define ∀-types (map λ.(format-id #'here "τ~a" %)
                                    (range (add1 depth-above))))
               (define total-nb-functions (vector-length names))
               <define-trees-result>)]))]
 
-@CHUNK[<bt-fields-type>
+♦CHUNK[<bt-fields-type>
        (define-for-syntax (bt-fields-type fields)
          (λ (stx)
            (syntax-case stx ()
@@ -313,27 +313,27 @@ interesting subparts of the trees (those where there are fields).
               #`(∀ fs (Promise #,(τ-tree-with-fields #'fs
                                                      fields)))])))]
 
-@CHUNK[<define-trees-result>
+♦CHUNK[<define-trees-result>
        #`(begin
            (define-type-expander bt-fields-id
              (bt-fields-type #'#,(syntax-local-introduce #'(field …))))
-           #,@(map #λ(define-replace-in-tree low-names
+           #,@(map λ.(define-replace-in-tree low-names
                        names rm-names ∀-types % (floor-log2 %))
                    (range 1 (add1 total-nb-functions)))
-           #;#,@(map #λ(define-remove-in-tree rm-names ∀-types % (floor-log2 %))
+           #;#,@(map λ.(define-remove-in-tree rm-names ∀-types % (floor-log2 %))
                      (range 1 (add1 total-nb-functions)))
-           #,@(map #λ(define-struct↔tree
+           #,@(map λ.(define-struct↔tree
                        offset all-fields ∀-types %1 %2)
                    (syntax->list #'(struct …))
                    (syntax->list #'([struct-field …] …))))]
 
-@subsection{Putting it all together}
+♦subsection{Putting it all together}
 
-@chunk[<maybe>
+♦chunk[<maybe>
        (struct (T) Some ([v : T]) #:transparent)
        (define-type (Maybe T) (U (Some T) 'NONE))]
 
-@chunk[<*>
+♦chunk[<*>
        (require delay-pure
                 "flexible-with-utils.hl.rkt"
                 (for-syntax (rename-in racket/base [... …])
@@ -363,4 +363,4 @@ interesting subparts of the trees (those where there are fields).
        <define-trees>
        <bt-fields-type>]
 
-@include-section[(submod "flexible-with-utils.hl.rkt" doc)]
+♦include-section[(submod "flexible-with-utils.hl.rkt" doc)]

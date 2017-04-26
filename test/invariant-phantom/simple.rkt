@@ -140,4 +140,5 @@
                                      (:a ≡ :a.f.h)
                                      (:a ∉ :a.f.g))
                          (Invariants (:a.l ≥ (+ (length :a.f.g) 2))
-                                     (:a ≢ :a.f.g.x)))
+                                     (:a ≢ :a.f.g.0)
+                                     (:a ≢ :a.f.g.1)))

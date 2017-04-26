@@ -1,4 +1,4 @@
-#lang aful/unhygienic type-expander/lang
+#lang dotlambda/unhygienic type-expander/lang
 
 (require (lib "phc-graph/flexible-with.hl.rkt")
          (for-syntax racket/syntax
@@ -43,37 +43,37 @@
 
 (check-equal?:
  (call-with-values
-  #λ(tree→sab (sab→tree 1 2))
+  λ.(tree→sab (sab→tree 1 2))
   list)
  '(1 2))
        
 (check-equal?:
  (call-with-values
-  #λ(tree→sabc (ann (with-c (sab→tree 1 2) 'nine)
-                    ((bt-fields a b c) One Positive-Byte 'nine)))
+  λ.(tree→sabc (ann (with-c (sab→tree 1 2) 'nine)
+                     ((bt-fields a b c) One Positive-Byte 'nine)))
   list)
  '(1 2 nine))
 
 (check-equal?:
  (call-with-values
-  #λ(tree→sabc (with-c (sab→tree 'NONE 'NONE) 'NONE))
+  λ.(tree→sabc (with-c (sab→tree 'NONE 'NONE) 'NONE))
   list)
  '(NONE NONE NONE))
 
 (check-equal?:
  (call-with-values
-  #λ(tree→sab (without-c (with-c (sab→tree 'NONE 'NONE) 'NONE)))
+  λ.(tree→sab (without-c (with-c (sab→tree 'NONE 'NONE) 'NONE)))
   list)
  '(NONE NONE))
 
 (check-equal?:
  (call-with-values
-  #λ(tree→sbc (without-a (with-c (sab→tree 'NONE 'NONE) 'NONE)))
+  λ.(tree→sbc (without-a (with-c (sab→tree 'NONE 'NONE) 'NONE)))
   list)
  '(NONE NONE))
 
 (check-equal?:
  (call-with-values
-  #λ(tree→sbc (without-a (with-c (sab→tree 1 2) 3)))
+  λ.(tree→sbc (without-a (with-c (sab→tree 1 2) 3)))
   list)
  '(2 3))
