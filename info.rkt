@@ -17,7 +17,8 @@
                "extensible-parser-specifications"
                "subtemplate"
                "stxparse-info"
-               "dotlambda"))
+               "dotlambda"
+               "typed-worklist"))
 (define build-deps '("scribble-lib"
                      "racket-doc"
                      "remember"

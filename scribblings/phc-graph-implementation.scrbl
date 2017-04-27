@@ -17,3 +17,4 @@ the @other-doc['(lib "phc-graph/scribblings/phc-graph.scrbl")] document.
 @include-section[(submod "../graph-info.hl.rkt" doc)]
 @include-section[(submod "../graph-type.hl.rkt" doc)]
 @include-section[(submod "../graph.hl.rkt" doc)]
+@include-section[(submod "../main-draft.hl.rkt" doc)]
