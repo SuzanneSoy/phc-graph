@@ -47,7 +47,7 @@
 ♦chunk[<signature>
        (_ graph-name
           #:∀ (pvarₕ …)
-          ({~lit node} nodeᵢ [fieldᵢⱼ :colon field-τᵢⱼ] …)
+          ({~lit node} nodeᵢ [fieldᵢⱼ cᵢⱼ:colon field-τᵢⱼ] …)
           …
           ({~lit mapping} (mappingₖ [argₖₗ :colon arg-τₖₗ] …)
                           :colon result-τₖ
@@ -65,25 +65,35 @@
 
 ♦chunk[|<phase~1: call mappings and extract placeholders>|
        #'(begin
-           (define (make-placeholderₖ argₖₗ …)
-             (list 'placeholderₖ argₖₗ …))
-           …
-           
-           (define (graph-name [rootₖ : (Listof (List arg-τₖₗ …))] …)
+           (define
+             #:∀ (pvarₕ …)
+             (graph-name [rootₖ : (Listof (List arg-τₖₗ …))] …)
+
+             ;; TODO: move these to a separate literate programming chunk
+             (define-type nodeᵢ (tagged nodeᵢ [fieldᵢⱼ cᵢⱼ field-τᵢⱼ] …))
+             …
+
+             (define (make-placeholderₖ argₖₗ …)
+               (list 'placeholderₖ argₖₗ …))
+             …
+             
              (worklist
               (list rootₖ …)
-              ((λ (args)
+              ((λ ([args : (List arg-τₖₗ …)])
                  (define-values (argₖₗ …) (apply values args))
                  (define result
                    (let* ([mappingₖ make-placeholderₖ]
                           …
-                          [argₖₗ convert-inflexible-to-flexible?]
+                          [argₖₗ 'convert-inflexible-to-flexible?]
                           …
-                          [argₖₗ invariant-well-scopedness?]
+                          [argₖₗ 'invariant-well-scopedness?]
                           …)
-                     . bodyₖ))
+                     (error "NOT IMPL YET.787543")
+                     ;. bodyₖ
+                     '(bodyₖ)))
                  ;; returns placeholders + the result:
-                 (extract-placeholders result))
+                 '(extract-placeholders result)
+                 (error "NOT IMPL YET.8946513648"))
                …)
               ((List arg-τₖₗ …) result-τₖ) …)))]
 
@@ -143,7 +153,8 @@ Row polymorphism: make a generic struct->vector and vector->struct?
                 (for-template (all-from-out "literals.rkt")))
        
        (require (for-template (only-meta-in 0 type-expander/lang)
-                              typed-worklist)
+                              typed-worklist
+                              phc-adt)
                 type-expander/expander
                 phc-toolkit/untyped/aliases
                 phc-toolkit/untyped/syntax-parse

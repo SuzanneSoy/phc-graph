@@ -16,3 +16,5 @@
 (remembered! tagged-structure (| Person-incomplete| name))
 (remembered! tagged-structure (City name))
 (remembered! tagged-structure (t0 w))
+(remembered! tagged-structure (City streets))
+(remembered! tagged-structure (Street a name))

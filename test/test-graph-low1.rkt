@@ -1,6 +1,8 @@
 #lang dotlambda/unhygienic type-expander/lang
 
 (require (for-syntax (lib "phc-graph/main-draft.hl.rkt")))
+(require phc-adt)
+(adt-init)
 
 (define-syntax low-graph low-graph-impl)
 
