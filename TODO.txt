@@ -1,0 +1,57 @@
+:::::::::Current task:
+
+with*: optimize by naming clusters of "missing", and naming types for known flex structs
+
+with*: call from phc-adt, wrappers to and from the actual structs
+
+:::::::::In progress:
+
+Draft the graph implementation
+
+Modularity
+
+:::::::::Ready:
+
+Run-time checkers for invariants
+
+Cleanup invariants-phantom.hl.rkt
+
+Implement graph
+
+Implement the first graph generation pass, with a placeholder wrapping each mapping result
+
+Implement the second graph generation pass: inline nodes
+
+Implement the third graph generation pass: replacing indices with promises
+
+Combine the graph passes into a single macro
+
+Relicensing
+
+Write "middle-dot" language extension
+
+Drop MathJax, directly print Unicode or render via LaTeX (speed & licensing issues)
+
+::::::::Later:
+
+Garbage collect graph
+
+Merge tagged-anytag-match into the regular match for tagged structures
+
+Check for non-intersection of the union types in traversal.hl.rkt, using the non-intersection implementation from phc-adt.
+
+to infer the type for curry, check using identifier-binding if the id is imported, if so try to print its type using eval
+
+:::::::::Backlog:
+
+Translate https://github.com/nanopass/nanopass-framework-scheme
+
+Translate https://github.com/akeep/scheme-to-c
+
+Formalise what well-typed means for typed-nanopass+graph means
+
+Formalise the semantics of typed-nanopass+graph programs (using redex?)
+
+Write memoir
+
+Proof that well-typed programs with the extensions translate to well-typed programs in plain TR, with the same semantics

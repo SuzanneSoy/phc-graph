@@ -24,7 +24,8 @@
                      "remember"
                      "typed-racket-doc"
                      "aful"
-                     "scribble-math"))
+                     "scribble-math"
+                     "at-exp-lib"))
 (define scribblings
   '(("scribblings/phc-graph.scrbl" ()
                                    ("Data Structures"))
