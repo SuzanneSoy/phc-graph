@@ -4,7 +4,12 @@
 
 ♦chunk[<*>|#
        
-(provide builder-τ)
+(provide builder-τ
+         None
+         Some
+         Some?
+         Some-f
+         N/S)
 
 (require racket/require
          (for-syntax (subtract-in racket/base subtemplate/override)
@@ -12,8 +17,9 @@
                      racket/function
                      subtemplate/override))
 
-(struct (T) Some ([f : T]))
-(struct (T) None ([f : T]))
+(struct N/S ())
+(struct (T) Some N/S ([f : T]))
+(struct (T) None N/S ([f : T]))
 
 (define-type-expander BinaryTree
   (syntax-parser
@@ -38,8 +44,9 @@
      (define/with-syntax ((exceptᵢⱼ …) …)
        ((map (const (remove Nᵢ Ns)) Ms) …))
      
-     #'(∀ ((?@ Kⱼ Xⱼ) …)
-          (→ (?@ Kⱼ Xⱼ) …
+     #'(∀ (A (?@ Kⱼ Xⱼ) …)
+          (→ A
+             (?@ Kⱼ Xⱼ) …
              (BinaryTree
               (U (Pairof Nᵢ
                          ;; If Kⱼ is Nᵢ, then {∩ Kᵢⱼ {U . exceptᵢⱼ}} will
@@ -54,16 +61,65 @@
                          ;; Therefore, the (None whatever) should appear only
                          ;; if there is indeed no key provided for that leaf.
                          (∩ (None (List {∩ Kᵢⱼ {U . exceptᵢⱼ}} …))
-                            (None Any)))
+                            A))
                  (∩ (Pairof Kᵢⱼ (Some Xᵢⱼ))
-                    (Pairof Nᵢⱼ Any))
+                    (Pairof Nᵢⱼ A))
                  …)
               …)))]))
 
 ; ../../../.racket/snapshot/pkgs/typed-racket-lib/typed-racket/types/overlap.rkt:40:0: mask-accessor: contract violation
 ;  expected: mask?
 ;  given: #f
-(define-type τ-4-2 (builder-τ 4 2))
+;(define-type τ-4-2 (builder-τ 4 2))
+
+(define-type t-4-2
+  (All (A 0/K 0/X 1/K 1/X)
+       (-> A
+           0/K
+           0/X
+           1/K
+           1/X
+           (List
+            (U (Pairof (∩ 0/K Zero) (∩ (Some 0/X) A))
+               (Pairof (∩ 1/K Zero) (∩ (Some 1/X) A))
+               (Pairof
+                Zero
+                (∩
+                 (None
+                  (List
+                   (U (∩ 0/K 2) (∩ 0/K 3) (∩ 0/K One))
+                   (U (∩ 1/K 2) (∩ 1/K 3) (∩ 1/K One))))
+                 A)))
+            (U (Pairof (∩ 0/K One) (∩ (Some 0/X) A))
+               (Pairof (∩ 1/K One) (∩ (Some 1/X) A))
+               (Pairof
+                One
+                (∩
+                 (None
+                  (List
+                   (U (∩ 0/K 2) (∩ 0/K 3) (∩ 0/K Zero))
+                   (U (∩ 1/K 2) (∩ 1/K 3) (∩ 1/K Zero))))
+                 A)))
+            (U (Pairof (∩ 0/K 2) (∩ (Some 0/X) A))
+               (Pairof (∩ 1/K 2) (∩ (Some 1/X) A))
+               (Pairof
+                2
+                (∩
+                 (None
+                  (List
+                   (U (∩ 0/K 3) (∩ 0/K One) (∩ 0/K Zero))
+                   (U (∩ 1/K 3) (∩ 1/K One) (∩ 1/K Zero))))
+                 A)))
+            (U (Pairof (∩ 0/K 3) (∩ (Some 0/X) A))
+               (Pairof (∩ 1/K 3) (∩ (Some 1/X) A))
+               (Pairof
+                3
+                (∩
+                 (None
+                  (List
+                   (U (∩ 0/K 2) (∩ 0/K One) (∩ 0/K Zero))
+                   (U (∩ 1/K 2) (∩ 1/K One) (∩ 1/K Zero))))
+                 A)))))))
 
 ;]
 
