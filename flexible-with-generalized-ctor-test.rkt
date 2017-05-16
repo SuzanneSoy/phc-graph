@@ -30,76 +30,71 @@
       'none))
 |#
 
-(struct (A) Some ([f : A]) #:transparent)
-(struct (A) Some0 Some () #:transparent)
-(struct (A) Some1 Some () #:transparent)
-(struct (A) Some2 Some () #:transparent)
-(struct (A) Some3 Some () #:transparent)
-(struct (A) None ([f : A]) #:transparent)
+
+
+
+
+
+
+
+
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Actual good implementation:
+
+;(struct (A) Some ([f : A]) #:transparent)
+;(struct (A) Some0 Some () #:transparent)
+;(struct (A) Some1 Some () #:transparent)
+;(struct (A) Some2 Some () #:transparent)
+;(struct (A) Some3 Some () #:transparent)
+;(struct (A) None ([f : A]) #:transparent)
 
 ;; A is:
-#;(U (Pairof Any (None (Listof (Some Any))))
-     (Some Any))
+#;(Pairof Any (U (Some Any) (None (Listof Any))))
 
-(struct |0| ())
-(struct |1| ())
-(struct |2| ())
-(struct |3| ())
+(: f (builder-τ 4 2))
 
-(: f (∀ (A 0/K 0/X 1/K 1/X)
-        (→ (∩ 0/K (U |0| |1| |2| |3|))
-           0/X
-           (∩ 1/K (U |0| |1| |2| |3|))
-           1/X
-           (List
-            (∩
-             (U
-              (Pairof |0| (None (List (∩ 0/K (U |1| |2| |3|)) (∩ 1/K (U |1| |2| |3|)))))
-              (∩ (Pairof 0/K (Some 0/X)) (Pairof |0| Any))
-              (∩ (Pairof 1/K (Some 1/X)) (Pairof |0| Any)))
-             A)
-            (∩
-             (U
-              (Pairof |1| (None (List (∩ 0/K (U |0| |2| |3|)) (∩ 1/K (U |0| |2| |3|)))))
-              (∩ (Pairof 0/K (Some 0/X)) (Pairof |1| Any))
-              (∩ (Pairof 1/K (Some 1/X)) (Pairof |1| Any)))
-             A)
-            (∩
-             (U
-              (Pairof |2| (None (List (∩ 0/K (U |0| |1| |3|)) (∩ 1/K (U |0| |1| |3|)))))
-              (∩ (Pairof 0/K (Some 0/X)) (Pairof |2| Any))
-              (∩ (Pairof 1/K (Some 1/X)) (Pairof |2| Any)))
-             A)
-            (∩
-             (U
-              (Pairof |3| (None (List (∩ 0/K (U |0| |1| |2|)) (∩ 1/K (U |0| |1| |2|)))))
-              (∩ (Pairof 0/K (Some 0/X)) (Pairof |3| Any))
-              (∩ (Pairof 1/K (Some 1/X)) (Pairof |3| Any)))
-             A)))))
-
-(define (f kx x ky y)
+(define (f oracle kx x ky y)
   (list (cond
-          [((make-predicate |0|) kx) (cons kx (Some x))]
-          [((make-predicate |0|) ky) (cons ky (Some y))]
-          [else (cons |0| (None (list kx ky)))])
+          [((make-predicate '|0|) kx)
+           (ann ((inst oracle (∩ (Pairof 0/K (Some 0/X)) (Pairof '|0| Any))) (cons kx (Some x)))
+                (∩ (Pairof 0/K (Some 0/X)) (Pairof '|0| Any) A))]
+          [((make-predicate '|0|) ky)
+           (ann ((inst oracle (∩ (Pairof 1/K (Some 1/X)) (Pairof '|0| Any))) (cons ky (Some y)))
+                (∩ (Pairof 1/K (Some 1/X)) (Pairof '|0| Any) A))]
+          [else
+           ((inst oracle (Pairof '|0| (None (List (∩ 0/K (U '|1| '|2| '|3|)) (∩ 1/K (U '|1| '|2| '|3|))))))
+            (cons '|0| (None (list kx ky))))])
         (cond
-          [((make-predicate |1|) kx) (cons kx (Some x))]
-          [((make-predicate |1|) ky) (cons ky (Some y))]
-          [else (cons |1| (None (list kx ky)))])
+          [((make-predicate '|1|) kx)
+           (ann ((inst oracle (∩ (Pairof 0/K (Some 0/X)) (Pairof '|1| Any))) (cons kx (Some x)))
+                (∩ (Pairof 0/K (Some 0/X)) (Pairof '|1| Any) A))]
+          [((make-predicate '|1|) ky)
+           (ann ((inst oracle (∩ (Pairof 1/K (Some 1/X)) (Pairof '|1| Any))) (cons ky (Some y)))
+                (∩ (Pairof 1/K (Some 1/X)) (Pairof '|1| Any) A))]
+          [else
+           ((inst oracle (Pairof '|1| (None (List (∩ 0/K (U '|0| '|2| '|3|)) (∩ 1/K (U '|0| '|2| '|3|))))))
+            (cons '|1| (None (list kx ky))))])
         (cond
-          [((make-predicate |2|) kx) (cons kx (Some x))]
-          [((make-predicate |2|) ky) (cons ky (Some y))]
-          [else (cons |2| (None (list kx ky)))])
+          [((make-predicate '|2|) kx)
+           (ann ((inst oracle (∩ (Pairof 0/K (Some 0/X)) (Pairof '|2| Any))) (cons kx (Some x)))
+                (∩ (Pairof 0/K (Some 0/X)) (Pairof '|2| Any) A))]
+          [((make-predicate '|2|) ky)
+           (ann ((inst oracle (∩ (Pairof 1/K (Some 1/X)) (Pairof '|2| Any))) (cons ky (Some y)))
+                (∩ (Pairof 1/K (Some 1/X)) (Pairof '|2| Any) A))]
+          [else
+           ((inst oracle (Pairof '|2| (None (List (∩ 0/K (U '|0| '|1| '|3|)) (∩ 1/K (U '|0| '|1| '|3|))))))
+            (cons '|2| (None (list kx ky))))])
         (cond
-          [((make-predicate |3|) kx) (cons kx (Some x))]
-          [((make-predicate |3|) ky) (cons ky (Some y))]
-          [else (cons |3| (None (list kx ky)))]))
-  ((λ () (error "not yet"))))
-
-
-
-
-
-
-
-
+          [((make-predicate '|3|) kx)
+           (ann ((inst oracle (∩ (Pairof 0/K (Some 0/X)) (Pairof '|3| Any))) (cons kx (Some x)))
+                (∩ (Pairof 0/K (Some 0/X)) (Pairof '|3| Any) A))]
+          [((make-predicate '|3|) ky)
+           (ann ((inst oracle (∩ (Pairof 1/K (Some 1/X)) (Pairof '|3| Any))) (cons ky (Some y)))
+                (∩ (Pairof 1/K (Some 1/X)) (Pairof '|3| Any) A))]
+          [else
+           ((inst oracle (Pairof '|3| (None (List (∩ 0/K (U '|0| '|1| '|2|)) (∩ 1/K (U '|0| '|1| '|2|))))))
+            (cons '|3| (None (list kx ky))))])))
