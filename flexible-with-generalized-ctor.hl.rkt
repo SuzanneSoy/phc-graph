@@ -10,10 +10,9 @@
 ꩜chunk[<*>
        (provide builder-τ
                 None
-                Some
-                Some?
-                Some-f
-                propagate-τ)
+                propagate-τ
+                oracle
+                builder-f)
 
        (require racket/require
                 (for-syntax (subtract-in racket/base subtemplate/override)
@@ -23,8 +22,7 @@
                             subtemplate/override)
                 (for-meta 2 racket/base))
 
-       (struct (T) Some ([f : T]))
-       (struct (T) None ([f : T]))
+       (struct (T) None ([f : (Promise T)]))
 
        (define-type-expander BinaryTree
          (syntax-parser
@@ -32,20 +30,11 @@
             ;; TODO: implement BinaryTree.
             #'(List leafⱼ …)]))
 
-       (define-syntax (def-SomeNone* stx)
-         (syntax-case stx ()
-           [(_ Some n)
-            (with-syntax ([(Someᵢ …) (map (λ (i) (format-id #'Some "Some~a" i))
-                                          (range n))])
-              #`(begin
-                  (provide Someᵢ …)
-                  (struct (T) Someᵢ Some ()) …))]))
-
-       (def-SomeNone* Some 4)
-
+       <propagate-τ>
+       <oracle-τ>
+       <oracle>
        <builder-τ>
-
-       <propagate-τ>]
+       <builder-f>]
 
 We first define the builder function's type. Since this type is rather
 complex, we define it using a macro. The type expander takes two arguments.
@@ -95,7 +84,7 @@ corresponding ꩜racket[Kⱼ] matches the leaf name, and ꩜racket[None] otherwi
 
 ꩜chunk[|<Some or None>|
        (U |<(Some Xⱼ) if Kⱼ = NSymᵢ>|
-          |<None if ∀ k ∈ Kⱼ, k ≠ NSymᵢ>|)]
+          |<None if ∀ k ∈ Kⱼ , k ≠ NSymᵢ>|)]
 
 This type-level conditional is achieved via a trick involving intersection
 types. The ꩜racket[Kⱼ] type should be a singleton type containing exactly one
@@ -110,14 +99,14 @@ pair.
 
 ꩜chunk[|<(Some Xⱼ) if Kⱼ = NSymᵢ>|
        (Pairof (∩ Kᵢⱼ 'NSymᵢⱼ)
-               (Some Xᵢⱼ))
+               Xᵢⱼ)
        …]
 
 where ꩜racket[Kᵢⱼ], ꩜racket[Xᵢⱼ] and ꩜racket[NSymᵢⱼ] are defined as follows:
 
 ꩜chunk[<builder-τ-with-3>
-       #:with ((Kᵢⱼ …) …) (map (const (Kⱼ …)) (Nᵢ …))
-       #:with ((Xᵢⱼ …) …) (map (const (Xⱼ …)) (Nᵢ …))
+       #:with ((Kᵢⱼ …) …) (map (const #'(Kⱼ …)) (Nᵢ …))
+       #:with ((Xᵢⱼ …) …) (map (const #'(Xⱼ …)) (Nᵢ …))
        #:with ((NSymᵢⱼ …) …) (map λni.(map (const ni) (Xⱼ …)) (NSymᵢ …))]
 
 We use this fact to construct a pair above. Its first element is either
@@ -148,9 +137,8 @@ The resulting type should therefore be ꩜racket[Nothing] only if there is no
 ꩜racket[Kⱼ] equal to ꩜racket[Nᵢ], and be the list of symbols
 ꩜racket[(List . exceptᵢ)] otherwise.
 
-꩜chunk[|<None if ∀ k ∈ Kⱼ, k ≠ NSymᵢ>|
-       (Pairof 'NSymᵢ
-               (None (List {∩ Kᵢⱼ {U 'exceptᵢⱼ …}} …)))]
+꩜chunk[|<None if ∀ k ∈ Kⱼ , k ≠ NSymᵢ>|
+       (None (List {∩ Kᵢⱼ {U 'exceptᵢⱼ …}} …))]
 
 This approach relies on the fact that occurrences of ꩜racket[Nothing] within
 structs and pairs containing collapse the entire struct or pair type to
@@ -192,9 +180,8 @@ instantiated.
 
 ꩜chunk[<propagate-τ>
        (define-type propagate-τ
-         (Pairof Any
-                 (U (None (Listof Natural))
-                    (Some Any))))]
+         (U (Pairof Any Any)
+            (None (Listof Any))))]
 
 ꩜;Use chunkref instead of ꩜racket[|<Some or None>|] ?
 
@@ -209,18 +196,27 @@ an ꩜racket[oracle] function, which transforms an element with the type
 ꩜racket[(∩ A B)], where ꩜racket[B] is the original type of the value to
 upgrade.
 
-꩜chunk[<oracle-type>
-       (∀ (B) (→ (∩ B
-                    (Pairof Any (U (Some Any) (None (Listof Any)))))
-                 (∩ A B)))]
+꩜chunk[<oracle-τ>
+       (define-type (oracle-τ A)
+         (∀ (B) (→ (∩ B
+                      (U (Pairof Any Any)
+                         (None (Listof Any))))
+                   (∩ A B))))]
 
-The builder function type is updated as follows:
+The oracle does nothing more than return its argument unchanged:
+
+꩜chunk[<oracle>
+       (: oracle (oracle-τ propagate-τ))
+       (define (oracle v) v)]
+
+We update the builder function type to accept an extra argument for the
+oracle:
 
 ꩜hlite[|<builder-function-type''>|
        {/(∀(_ _ _)(→ + _ _ / _ _ ooo _))}
        (∀ (A {?@ Kⱼ Xⱼ} …)
           (→ (code:comment "; Oracle:")
-             <oracle-type>
+             (oracle-τ A)
              (code:comment "; Keys and values:")
              {?@ (∩ Kⱼ (U 'NSymⱼᵢ …)) Xⱼ} …
              ;; Result type:
@@ -228,3 +224,30 @@ The builder function type is updated as follows:
 
 
 
+
+
+꩜chunk[<builder-f>
+       (define-syntax builder-f
+         (syntax-parser
+           [(_ name n m)
+            <builder-τ-with-1>
+            <builder-τ-with-2>
+            <builder-τ-with-3>
+            <builder-τ-with-4>
+            #'(begin |<builder-function-implementation>|)]))]
+
+꩜chunk[<builder-τ-with-4>
+       #:with ((kᵢⱼ …) …) (map (const #'(kⱼ …)) (Nᵢ …))
+       #:with ((xᵢⱼ …) …) (map (const #'(xⱼ …)) (Nᵢ …))]
+
+꩜chunk[<builder-function-implementation>
+       (: name |<builder-function-type''>| #;(builder-τ n m))
+       (define (name oracle {?@ kⱼ xⱼ} …)
+         (list (cond
+                 [((make-predicate 'NSymᵢⱼ) kᵢⱼ)
+                  ((inst oracle (Pairof (∩ Kᵢⱼ 'NSymᵢⱼ) Xᵢⱼ)) (cons kᵢⱼ xᵢⱼ))]
+                 …
+                 [else
+                  ((inst oracle (None (List (∩ Kᵢⱼ (U 'exceptᵢⱼ …)) …)))
+                   (None (delay (list kᵢⱼ …))))])
+               …))]
