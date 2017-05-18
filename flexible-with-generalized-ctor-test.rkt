@@ -1,13 +1,28 @@
 #lang type-expander
-(require (lib "phc-graph/flexible-with-generalized-ctor.hl.rkt"))
-(provide f g)
+(require "flexible-with-generalized-ctor.hl.rkt"
+         "binarytree.hl.rkt")
+(provide f-4-2 f-8-3)
 
-(builder-f f 4 2)
+(builder-f f-4-2 4 2)
 
-#;((inst f propagate-τ '|1| Number '|3| String)
-   oracle '|1| 100 '|3| "bee")
+(ann ((inst f-4-2 propagate-τ '|1| Number '|3| String)
+      oracle '|1| 100 '|3| "bee")
+     (BinaryTree
+      (Promise (Pairof #f Any))
+      (Promise (Pairof '|1| Number))
+      (Promise (Pairof #f Any))
+      (Promise (Pairof '|3| String))))
 
-(builder-f g 8 3)
+(builder-f f-8-3 8 3)
 
-#;((inst g propagate-τ '|1| Number '|3| String '|7| Symbol)
-   oracle '|1| 100 '|3| "bee" '|7| 'buzz)
+(ann ((inst f-8-3 propagate-τ '|1| Number '|3| String '|7| Symbol)
+      oracle '|1| 100 '|3| "bee" '|7| 'buzz)
+     (BinaryTree
+      (Promise (Pairof #f Any))
+      (Promise (Pairof '|1| Number))
+      (Promise (Pairof #f Any))
+      (Promise (Pairof '|3| String))
+      (Promise (Pairof #f Any))
+      (Promise (Pairof #f Any))
+      (Promise (Pairof #f Any))
+      (Promise (Pairof '|7| Symbol))))

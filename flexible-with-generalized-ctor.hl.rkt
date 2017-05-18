@@ -9,7 +9,6 @@
 
 ꩜chunk[<*>
        (provide builder-τ
-                None
                 propagate-τ
                 oracle
                 builder-f)
@@ -20,15 +19,8 @@
                             racket/list
                             racket/function
                             subtemplate/override)
-                (for-meta 2 racket/base))
-
-       (struct (T) None ([f : (Promise T)]))
-
-       (define-type-expander BinaryTree
-         (syntax-parser
-           [(_ leafⱼ …)
-            ;; TODO: implement BinaryTree.
-            #'(List leafⱼ …)]))
+                (for-meta 2 racket/base)
+                "binarytree.hl.rkt")
 
        <propagate-τ>
        <oracle-τ>
@@ -70,7 +62,7 @@ form of) the builder function type as follows:
           (→ (code:comment "; Keys and values:")
              {?@ (∩ Kⱼ (U 'NSymⱼᵢ …)) Xⱼ} …
              ;; Result type:
-             (BinaryTree |<Some or None>| …)))]
+             (BinaryTree (Promise |<Some or None>|) …)))]
 
 We expect each key ꩜racket[Kⱼ] to be a symbol of the shape ꩜racket[|0|],
 ꩜racket[|1|], ꩜racket[|2|] and so on:
@@ -115,11 +107,12 @@ otherwise. The second element of the pair contains our expected
 ꩜racket[(Some Xⱼ)] type, but the whole pair is collapsed to ꩜racket[Nothing]
 when ꩜racket[Kⱼ] is not ꩜racket['NSymᵢ].
 
-We use a similar approach to conditionally produce the ꩜racket[None] element,
-but instead of intersecting ꩜racket[Kⱼ] with ꩜racket['NSymᵢ], we intersect it
-with the complement of ꩜racket['NSymᵢ]. Typed Racket lacks the possibility to
-negate a type, so we manually compute the complement of ꩜racket['NSymᵢ] in the
-set of possible keys (that is, ꩜racket['NSymᵢ …]).
+We use a similar approach to conditionally produce the ꩜racket[None] element
+(which we represent as ꩜racket[#f]), but instead of intersecting ꩜racket[Kⱼ]
+with ꩜racket['NSymᵢ], we intersect it with the complement of ꩜racket['NSymᵢ].
+Typed Racket lacks the possibility to negate a type, so we manually compute
+the complement of ꩜racket['NSymᵢ] in the set of possible keys (that is,
+꩜racket['NSymᵢ …]).
 
 ꩜chunk[<builder-τ-with-3>
        #:with NSyms (NSymᵢ …)
@@ -138,7 +131,7 @@ The resulting type should therefore be ꩜racket[Nothing] only if there is no
 ꩜racket[(List . exceptᵢ)] otherwise.
 
 ꩜chunk[|<None if ∀ k ∈ Kⱼ , k ≠ NSymᵢ>|
-       (None (List {∩ Kᵢⱼ {U 'exceptᵢⱼ …}} …))]
+       (Pairof #f (List {∩ Kᵢⱼ {U 'exceptᵢⱼ …}} …))]
 
 This approach relies on the fact that occurrences of ꩜racket[Nothing] within
 structs and pairs containing collapse the entire struct or pair type to
@@ -163,12 +156,12 @@ To force Typed Racket to propagate ꩜racket[Nothing] outwards as much as
 we need, we intersect the whole form with a polymorphic type ꩜racket[A]:
 
 ꩜hlite[|<builder-function-type'>|
-       {/(∀(+ _ / _ _)(→ _ _ ooo (bt + (∩ / _ + A) / _)))}
+       {/(∀(+ _ / _ _)(→ _ _ ooo (bt (p + (∩ / _ + A)) / ooo)))}
        (∀ (A {?@ Kⱼ Xⱼ} …)
           (→ (code:comment "; Keys and values:")
              {?@ (∩ Kⱼ (U 'NSymⱼᵢ …)) Xⱼ} …
              ;; Result type:
-             (BinaryTree (∩ |<Some or None>| A) …)))]
+             (BinaryTree (Promise (∩ |<Some or None>| A)) …)))]
 
 The type ꩜racket[propagate-τ] defined below is used to instantiate ꩜racket[A],
 and is carefully picked so that its intersection will in no way change the
@@ -180,8 +173,8 @@ instantiated.
 
 ꩜chunk[<propagate-τ>
        (define-type propagate-τ
-         (U (Pairof Any Any)
-            (None (Listof Any))))]
+         (U (Pairof Symbol Any)
+            (Pairof #f (Listof Symbol))))]
 
 ꩜;Use chunkref instead of ꩜racket[|<Some or None>|] ?
 
@@ -199,8 +192,8 @@ upgrade.
 ꩜chunk[<oracle-τ>
        (define-type (oracle-τ A)
          (∀ (B) (→ (∩ B
-                      (U (Pairof Any Any)
-                         (None (Listof Any))))
+                      (U (Pairof Symbol Any)
+                         (Pairof #f (Listof Symbol))))
                    (∩ A B))))]
 
 The oracle does nothing more than return its argument unchanged:
@@ -220,7 +213,7 @@ oracle:
              (code:comment "; Keys and values:")
              {?@ (∩ Kⱼ (U 'NSymⱼᵢ …)) Xⱼ} …
              ;; Result type:
-             (BinaryTree (∩ |<Some or None>| A) …)))]
+             (BinaryTree (Promise (∩ |<Some or None>| A)) …)))]
 
 
 
@@ -243,11 +236,12 @@ oracle:
 ꩜chunk[<builder-function-implementation>
        (: name |<builder-function-type''>| #;(builder-τ n m))
        (define (name oracle {?@ kⱼ xⱼ} …)
-         (list (cond
-                 [((make-predicate 'NSymᵢⱼ) kᵢⱼ)
-                  ((inst oracle (Pairof (∩ Kᵢⱼ 'NSymᵢⱼ) Xᵢⱼ)) (cons kᵢⱼ xᵢⱼ))]
-                 …
-                 [else
-                  ((inst oracle (None (List (∩ Kᵢⱼ (U 'exceptᵢⱼ …)) …)))
-                   (None (delay (list kᵢⱼ …))))])
+         (list (delay
+                 (cond
+                   [((make-predicate 'NSymᵢⱼ) kᵢⱼ)
+                    ((inst oracle (Pairof (∩ Kᵢⱼ 'NSymᵢⱼ) Xᵢⱼ)) (cons kᵢⱼ xᵢⱼ))]
+                   …
+                   [else
+                    ((inst oracle (Pairof #f (List (∩ Kᵢⱼ (U 'exceptᵢⱼ …)) …)))
+                     (cons #f (list kᵢⱼ …)))]))
                …))]
