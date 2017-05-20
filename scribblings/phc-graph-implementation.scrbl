@@ -12,7 +12,7 @@ the @other-doc['(lib "phc-graph/scribblings/phc-graph.scrbl")] document.
 @(table-of-contents)
 
 @include-section[(submod "../traversal.hl.rkt" doc)]
-@include-section[(submod "../flexible-with.hl.rkt" doc)]
+@include-section[(submod "../flexible-with2.hl.rkt" doc)]
 @include-section[(submod "../invariants-phantom.hl.rkt" doc)]
 @include-section[(submod "../graph-info.hl.rkt" doc)]
 @include-section[(submod "../graph-type.hl.rkt" doc)]

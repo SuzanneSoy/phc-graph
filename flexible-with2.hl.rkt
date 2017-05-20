@@ -14,16 +14,17 @@
 Our goal here is to have strongly typed records, with row polymorphism (a
 ♦racket[Rest] row type variable can range over multiple possibly-present
 fields), and structural type equivalence (two record types are identical if
-they have the same fields, and these fields have the same types).
+they have the same fields and the type of the fields is the same in both record
+types).
 
 ♦section{Overview}
 
 We represent flexible records using a tree, where the leaves are field values.
 Every field which occurs anywhere in the program is assigned a constant index.
 This index determines which leaf is used to store that field's values. In
-order to avoid storing a huge tree for every tree-record, the actual fields
-are captured by a closure, and the tree is lazily generated (node by node)
-upon access.
+order to avoid storing in-memory a huge tree for every record, the actual
+fields are captured by a closure, and the tree is lazily generated (node by
+node) upon access.
 
 The type for a flexible record can support row polymorphism: the type of
 fields which may optionally be present are represented by a polymorphic type
@@ -34,6 +35,30 @@ variables, a branch containing only optional fields can be collapsed into a
 single type variable. An exception to this rule is when a field needs to be
 added by the user code in the middle of a branch: in this case the branch may
 not be collapsed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ♦section{Type of a tree-record, with a hole}
 
@@ -82,38 +107,40 @@ with a new one.
                                  replacement))))]
 
 ♦CHUNK[<define-replace-in-tree>
-       (: replace-right (∀ (A B C R) (→ (→ (Promise B) R (Promise C))
-                                        (Promise (Pairof A B))
-                                        R
-                                        (Promise (Pairof A C)))))
        (define-pure/stateless
-         #:∀ (A B C R)
-         (replace-right [next-id : (→ (Promise B) R (Promise C))]
-                        [tree-thunk : (Promise (Pairof A B))]
-                        [replacement : R])
-         (delay/pure/stateless
-          (let ([tree (force tree-thunk)])
-            (let ([left-subtree (car tree)]
-                  [right-subtree (cdr tree)])
-              (cons left-subtree
-                    (force (next-id (delay/pure/stateless right-subtree)
-                                    replacement)))))))
-       (: replace-left (∀ (A B C R) (→ (→ (Promise A) R (Promise C))
-                                       (Promise (Pairof A B))
-                                       R
-                                       (Promise (Pairof C B)))))
+         (: replace-right (∀ (A B C R) (→ (→ (Promise B) R (Promise C))
+                                          (Promise (Pairof A B))
+                                          R
+                                          (Promise (Pairof A C)))))
+         (define
+           #:∀ (A B C R)
+           (replace-right [next-id : (→ (Promise B) R (Promise C))]
+                          [tree-thunk : (Promise (Pairof A B))]
+                          [replacement : R])
+           (delay/pure/stateless
+            (let ([tree (force tree-thunk)])
+              (let ([left-subtree (car tree)]
+                    [right-subtree (cdr tree)])
+                (cons left-subtree
+                      (force (next-id (delay/pure/stateless right-subtree)
+                                      replacement))))))))
        (define-pure/stateless
-         #:∀ (A B C R)
-         (replace-left [next-id : (→ (Promise A) R (Promise C))]
-                       [tree-thunk : (Promise (Pairof A B))]
-                       [replacement : R])
-         (delay/pure/stateless
-          (let ([tree (force tree-thunk)])
-            (let ([left-subtree (car tree)]
-                  [right-subtree (cdr tree)])
-              (cons (force (next-id (delay/pure/stateless left-subtree)
-                                    replacement))
-                    right-subtree)))))
+         (define
+           (: replace-left (∀ (A B C R) (→ (→ (Promise A) R (Promise C))
+                                           (Promise (Pairof A B))
+                                           R
+                                           (Promise (Pairof C B)))))
+           #:∀ (A B C R)
+           (replace-left [next-id : (→ (Promise A) R (Promise C))]
+                         [tree-thunk : (Promise (Pairof A B))]
+                         [replacement : R])
+           (delay/pure/stateless
+            (let ([tree (force tree-thunk)])
+              (let ([left-subtree (car tree)]
+                    [right-subtree (cdr tree)])
+                (cons (force (next-id (delay/pure/stateless left-subtree)
+                                      replacement))
+                      right-subtree))))))
 
        (define-for-syntax (define-replace-in-tree low-names names rm-names τ* i depth)
          (define/with-syntax name (vector-ref names (sub1 i)))
@@ -130,17 +157,18 @@ with a new one.
              (define-type (tree-type-with-replacement-name #,@τ*-limited T)
                (Promise #,(tree-type-with-replacement i #'T τ*-limited)))
 
-             (: low-name
-                (∀ (#,@τ*-limited T)
-                   (→ (tree-type-with-replacement-name #,@τ*-limited Any)
-                      T
-                      (tree-type-with-replacement-name #,@τ*-limited T))))
              (define-pure/stateless
-               #:∀ (#,@τ*-limited T)
-               (low-name [tree-thunk : (tree-type-with-replacement-name #,@τ*-limited Any)]
-                         [replacement : T])
-               : (Promise #,(tree-type-with-replacement i #'T τ*-limited))
-               #,<make-replace-in-tree-body>)
+               (: low-name
+                  (∀ (#,@τ*-limited T)
+                     (→ (tree-type-with-replacement-name #,@τ*-limited Any)
+                        T
+                        (tree-type-with-replacement-name #,@τ*-limited T))))
+               (define
+                 #:∀ (#,@τ*-limited T)
+                 (low-name [tree-thunk : (tree-type-with-replacement-name #,@τ*-limited Any)]
+                           [replacement : T])
+                 : (Promise #,(tree-type-with-replacement i #'T τ*-limited))
+                 #,<make-replace-in-tree-body>))
 
              (: name
                 (∀ (#,@τ*-limited T)
