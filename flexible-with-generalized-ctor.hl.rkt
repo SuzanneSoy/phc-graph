@@ -5,7 +5,6 @@
  flexible structures}
 
 ꩜(require hyper-literate/diff1)
-꩜(init)
 
 ꩜chunk[<*>
        (provide builder-τ
@@ -42,7 +41,7 @@ the function accepts.
             <builder-τ-with-1>
             <builder-τ-with-2>
             <builder-τ-with-3>
-            #'|<builder-function-type''>|]))]
+            #'|<builder-function-type″>|]))]
 
 We start by defining a few syntax pattern variables which will be used in the
 later definitions. The lists ꩜racket[Nᵢ] and ꩜racket[Mⱼ] range over the field
@@ -155,7 +154,7 @@ simplification step in some situations but not others:
 To force Typed Racket to propagate ꩜racket[Nothing] outwards as much as
 we need, we intersect the whole form with a polymorphic type ꩜racket[A]:
 
-꩜hlite[|<builder-function-type'>|
+꩜hlite[|<builder-function-type′>|
        {/(∀(+ _ / _ _)(→ _ _ ooo (bt (p + (∩ / _ + A)) / ooo)))}
        (∀ (A {?@ Kⱼ Xⱼ} …)
           (→ (code:comment "; Keys and values:")
@@ -205,7 +204,7 @@ The oracle does nothing more than return its argument unchanged:
 We update the builder function type to accept an extra argument for the
 oracle:
 
-꩜hlite[|<builder-function-type''>|
+꩜hlite[|<builder-function-type″>|
        {/(∀(_ _ _)(→ + _ _ / _ _ ooo _))}
        (∀ (A {?@ Kⱼ Xⱼ} …)
           (→ (code:comment "; Oracle:")
@@ -234,7 +233,7 @@ oracle:
        #:with ((xᵢⱼ …) …) (map (const #'(xⱼ …)) (Nᵢ …))]
 
 ꩜chunk[<builder-function-implementation>
-       (: name |<builder-function-type''>| #;(builder-τ n m))
+       (: name |<builder-function-type″>| #;(builder-τ n m))
        (define (name oracle {?@ kⱼ xⱼ} …)
          (list (delay
                  (cond

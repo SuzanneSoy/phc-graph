@@ -9,7 +9,21 @@
   '("(lib phc-graph/scribblings/phc-graph-implementation.scrbl)"
     "phc-graph/flexible-with"))
 
-꩜require[scriblib/footnote]
+꩜require[scriblib/footnote
+         scriblib/figure
+         hyper-literate/diff1
+         racket/runtime-path]
+
+꩜require[scribble/core
+         scribble/html-properties]
+꩜elem[#:style (style #f (list (css-addition
+                               #"
+.Figure,
+.FigureMulti,
+.FigureMultiWide,
+.Herefigure {
+  border-color: #b5b5b5 !important;
+}")))]
 
 ꩜section{Goals}
 
@@ -30,42 +44,229 @@ node) upon access.
 
 The type for a flexible record can support row polymorphism: the type of
 fields which may optionally be present are represented by a polymorphic type
+꩜; TODO: "not only one" sounds like "¬only … but also" instead of "¬limited to…"
 variable. Note that this means that not only one type variable is used, but
 several꩜note{In principle, each potentially-present field would need a
  distinct type variable, but whole potentially-present branches may be
  collapsed to a single type variable if no access is made to the variables
- within.}. We define below facilities to automatically generate this list of
+ within.}.
+
+
+꩜section{Generating the tree type with polymorphic holes}
+
+We define in this section facilities to automatically generate this list of
 polymorphic type variables. In order to avoid having a huge number of type
 variables, a branch containing only optional fields can be collapsed into a
 single type variable. An exception to this rule is when a field needs to be
-added by the user code in the middle of a branch: in this case the branch may
-not be collapsed.
+added or modified by the user code: in this case the polymorphic type variable
+for that field must be preserved, and the branch may not entirely be
+collapsed.
 
+We take as an example the case where that there are 8 fields (꩜racketid[f1],
+꩜racketid[f2], ꩜racketid[a], ꩜racketid[b], ꩜racketid[f5], ꩜racketid[f6],
+꩜racketid[f7] and ꩜racketid[u]) used in the whole program. Records are
+therefore represented as a tree of depth 4 (including the root node) with 8
+leaves. A record with the fields ꩜racketid[a] and ꩜racketid[b] will be
+represented as a tree where the branch containing ꩜racketid[f1] and
+꩜racketid[f2] is collapsed. Furthermore, the right branch of the root,
+containing ꩜racketid[f5], ꩜racketid[f6], ꩜racketid[f7] and ꩜racketid[u] will
+also be collapsed.
 
+꩜define-runtime-path[scribblings/collapse.png
+                     "scribblings/collapsed.png"]
+꩜figure["fig:flex-with-tree:collapsed"
+        ꩜elem{The tree representing the type for a record with fields
+         ꩜racketid[a] and ꩜racketid[b] is ꩜racket[((C¹ . (a . b)) . C²)], where
+         ꩜racket[Cⁱ] indicates that a single polymorphic type is used to
+         represent the type of the whole collapsed branch.}
+        ꩜image[scribblings/collapse.png]{}]
 
+꩜define-runtime-path[scribblings/collapsed-updated.png
+                     "scribblings/collapsed-updated.png"]
+꩜figure["fig:flex-with-tree:collapsed-updated"
+        ꩜elem{Updating the node ꩜racketid[u], which appears somewhere in the
+         collapsed branch ꩜racketid[C²] is not possible, because the type
+         abstracted away by ꩜racketid[C²] may be different before and after the
+         update.}
+        ꩜image[scribblings/collapsed-updated.png]{}]
 
+꩜define-runtime-path[scribblings/collapsed-breakdown.png
+                     "scribblings/collapsed-breakdown.png"]
+꩜figure["fig:flex-with-tree:collapsed-updated"
+        ꩜elem{We therefore break apart the collapsed branch ꩜racketid[C²]. The
+         tree representing the type for a record with fields ꩜racketid[a] and
+         ꩜racketid[b], and where the field ꩜racketid[u] may be updated or added,
+         is ꩜racket[((C¹ . (a . b)) . (|C²′| . (C³ . u)))]. Note that
+         ꩜racketid[u] may refer to a possibly absent field (in which case the
+         polymorphic type variable will be instantiated with ꩜racket[None].}
+        ꩜image[scribblings/collapsed-breakdown.png]{}]
 
+꩜section{From a selection of field indieces to a tree shape}
 
+꩜defproc[#:kind "phase 1 procedure"
+         (idx→tree [none-wrapper (->d [depth exact-nonnegative-integer?]
+                                      any/c)]
+                   [leaf-wrapper (->d [i-in-vec exact-nonnegative-integer?]
+                                      [leaf-idx exact-nonnegative-integer?]
+                                      any/c)]
+                   [node-wrapper (->d [left any/c]
+                                      [right any/c]
+                                      any/c)]
+                   [vec (vectorof exact-nonnegative-integer?)])
+         r]{
+ Given a flat list of field indicies (that is, leaf positions in the tree
+ representation), ꩜racket[idx→tree] generates tree-shaped code, transforming
+ each leaf with ꩜racket[_leaf-wrapper], each intermediate node with
+ ꩜racket[_node-wrapper] and each leaf not present in the initial list with
+ ꩜racket[none-wrapper].
 
+ The ꩜racket[idx→tree] is a two-step curried function, and the first step
+ returns a function with the following signature:
 
+ ꩜defproc[(r [#:depth depth exact-nonnegative-integer?]
+             [#:vec-bounds vec-start exact-nonnegative-integer?]
+             #|        |# [vec-after-end exact-nonnegative-integer?]
+             [#:leaf-bounds first-leaf exact-nonnegative-integer?]
+             #|         |# [after-last-leaf exact-nonnegative-integer?])
+          any/c]{}
+}
 
+꩜chunk[<idx→tree>
+       (define/contract (idx→tree #:none-wrapper none-wrapper
+                                  #:leaf-wrapper leaf-wrapper
+                                  #:node-wrapper node-wrapper
+                                  #:vec vec)
+         <idx→tree/ctc>
+         (define (r #:depth depth
+                    #:vec-bounds vec-start vec-after-end
+                    #:leaf-bounds first-leaf after-last-leaf)
+           (cond
+             [(= vec-start vec-after-end)
+              (none-wrapper depth)]
+             [(= (+ first-leaf 1) after-last-leaf)
+              (leaf-wrapper vec-start (vector-ref vec vec-start))]
+             [else
+              (let* ([leftmost-right-leaf (/ (+ first-leaf after-last-leaf) 2)]
+                     [vec-left-branch-start vec-start]
+                     [vec-left-branch-after-end
+                      (find-≥ leftmost-right-leaf vec vec-start vec-after-end)]
+                     [vec-right-branch-start vec-left-branch-after-end]
+                     [vec-right-branch-after-end vec-after-end])
+                (node-wrapper
+                 (r #:depth (sub1 depth)
+                    #:vec-bounds vec-left-branch-start
+                    #|        |# vec-left-branch-after-end
+                    #:leaf-bounds first-leaf
+                    #|         |# leftmost-right-leaf)
+                 (r #:depth (sub1 depth)
+                    #:vec-bounds vec-right-branch-start
+                    #|        |# vec-right-branch-after-end
+                    #:leaf-bounds leftmost-right-leaf
+                    #|         |# after-last-leaf)))]))
+         r)]
 
+꩜chunk[<idx→tree/ctc>
+       (-> #:none-wrapper (->d ([depth exact-nonnegative-integer?])
+                               [result any/c])
+           #:leaf-wrapper (->d ([i-in-vec exact-nonnegative-integer?]
+                                [leaf-idx exact-nonnegative-integer?])
+                               any)
+           #:node-wrapper (->d ([left any/c]
+                                [right any/c])
+                               any)
+           #:vec (vectorof exact-nonnegative-integer?)
+           (-> #:depth exact-nonnegative-integer?
+               #:vec-bounds exact-nonnegative-integer?
+               #|        |# exact-nonnegative-integer?
+               #:leaf-bounds exact-nonnegative-integer?
+               #|         |# exact-nonnegative-integer?
+               any/c))]
 
+꩜section{Creating a record builder given a set of field indices}
 
+꩜chunk[<record-builder>
+       ;; TODO: clean this up (use subtemplate).
+       (define-syntax defempty
+         (syntax-parser
+           [(_ n:nat)
+            #:with (empty1 emptyA …)
+            (map (λ (depth)
+                   (string->symbol (format "empty~a" (expt 2 depth))))
+                 (range (add1 (syntax-e #'n))))
+            #:with (emptyB … _) #'(empty1 emptyA …)
+            #:with (empty1/τ emptyA/τ …) (stx-map λ.(format-id % "~a/τ" %)
+                                                  #'(empty1 emptyA …))
+            #:with (emptyB/τ … _) #'(empty1/τ emptyA/τ …)
+            (syntax-local-introduce
+             #'(begin (define-type empty1/τ 'none)
+                      (define-type emptyA/τ (Pairof emptyB/τ emptyB/τ))
+                      …
+                      (define empty1 : empty1/τ 'none)
+                      (define emptyA : emptyA/τ (cons emptyB emptyB))
+                      …
+                      (provide empty1 emptyA …
+                               empty1/τ emptyA/τ …)))]))
+       (defempty 10)
+       
+       ;; The range is [start .. end[, that is start is part of the range,
+       ;; but end is not.
+       ;; Returns a value in the range start .. end (if end is returned, then
+       ;; it means that all elements in the range (which excludes end) are
+       ;; greater than val).
+       (define-for-syntax (find-≥ val vec start end)
+         ;; TODO: assert that vec[start] < val (actually: it's not the case)
+         ;; TODO: assert that vec[end] ≥ val
+         (define n-elements (- end start))
+         (if (= n-elements 1)  ;; there is only one element
+             (if (>= (vector-ref vec start) val)
+                 start
+                 end)
+             (let ()
+               (define mid (ceiling (/ (+ start end) 2)))
+               (if (>= (vector-ref vec mid) val)
+                   (find-≥ val vec start mid)
+                   (find-≥ val vec mid end)))))
+       (define-syntax record-builder
+         (syntax-parser
+           ;; depth ≥ 0. 0 ⇒ a single node, 1 ⇒ 2 nodes, 2 ⇒ 4 nodes and so on.
+           [(_ depth:nat idx:nat …)
+            ;; TODO: check that the IDs are unique.
+            (define vec (list->vector (sort (syntax->datum #'(idx …)) <)))
+            (define arg-vec (vector-map (λ (idx)
+                                          (format-id #;TODO:FIXME: (syntax-local-introduce #'here)
+                                                     "arg~a"
+                                                     idx))
+                                        vec))
+            (define/with-syntax #(arg …) arg-vec)
+            (define/with-syntax (arg/τ …) (stx-map (λ (arg)
+                                                     (format-id arg "~a/τ" arg))
+                                                   #'(arg …)))
+            
+            (define/with-syntax tree
+              ((idx→tree <record-builder/wrappers>
+                         #:vec vec)
+               #:depth (syntax-e #'depth)
+               #:vec-bounds 0 (vector-length vec)
+               #:leaf-bounds 0 (expt 2 (syntax-e #'depth))))
+            #'(λ #:∀ (arg/τ …) ([arg : arg/τ] …)
+                tree)]))]
 
+꩜hlite[<record-builder/wrappers> {-/ (_ = _ _ _ _ _ _ _ _ _ -/ _ vec)}
+       (idx→tree
+        #:none-wrapper λdepth.(format-id #'here "empty~a" (expt 2 depth))
+        #:leaf-wrapper λi.idx.(vector-ref arg-vec i)
+        #:node-wrapper λl.r.(list #'cons l r)
+        #:vec vec)]
 
+꩜section{Type of a record, with a multiple holes}
 
+꩜section{Type of a record, with a single hole}
 
-
-
-
-
-
-
-
-
-
-꩜section{Type of a tree-record, with a hole}
+In order to functionally update records, the updating functions will take a
+tree where the type of a single leaf needs to be known. This of course means
+that branches that spawn off on the path from the root have to be given a
+polymorphic type, so that the result can have the same type for these branches
+as the original value to update.
 
 ꩜CHUNK[<tree-type-with-replacement>
        (define-for-syntax (tree-type-with-replacement n last τ*)
@@ -147,16 +348,20 @@ with a new one.
                                       replacement))
                       right-subtree))))))
 
-       (define-for-syntax (define-replace-in-tree low-names names rm-names τ* i depth)
+       (define-for-syntax (define-replace-in-tree
+                            low-names names rm-names τ* i depth)
          (define/with-syntax name (vector-ref names (sub1 i)))
          (define/with-syntax rm-name (vector-ref rm-names (sub1 i)))
          (define/with-syntax low-name (vector-ref low-names (sub1 i)))
-         (define/with-syntax tree-type-with-replacement-name (gensym 'tree-type-with-replacement))
-         (define/with-syntax tree-replacement-type-name (gensym 'tree-replacement-type))
+         (define/with-syntax tree-type-with-replacement-name
+           (gensym 'tree-type-with-replacement))
+         (define/with-syntax tree-replacement-type-name
+           (gensym 'tree-replacement-type))
          (define τ*-limited (take τ* depth))
          (define τ*-limited+T-next (if (= depth 0)
                                        (list #'T)
-                                       (append (take τ* (sub1 depth)) (list #'T))))
+                                       (append (take τ* (sub1 depth))
+                                               (list #'T))))
          #`(begin
              (provide name rm-name)
              (define-type (tree-type-with-replacement-name #,@τ*-limited T)
@@ -170,7 +375,8 @@ with a new one.
                         (tree-type-with-replacement-name #,@τ*-limited T))))
                (define
                  #:∀ (#,@τ*-limited T)
-                 (low-name [tree-thunk : (tree-type-with-replacement-name #,@τ*-limited Any)]
+                 (low-name [tree-thunk : (tree-type-with-replacement-name
+                                          #,@τ*-limited Any)]
                            [replacement : T])
                  : (Promise #,(tree-type-with-replacement i #'T τ*-limited))
                  #,<make-replace-in-tree-body>))
@@ -179,7 +385,8 @@ with a new one.
                 (∀ (#,@τ*-limited T)
                    (→ (tree-type-with-replacement-name #,@τ*-limited Any)
                       T
-                      (tree-type-with-replacement-name #,@τ*-limited (Some T)))))
+                      (tree-type-with-replacement-name #,@τ*-limited
+                                                       (Some T)))))
              (define (name tree-thunk replacement)
                (low-name tree-thunk (Some replacement)))
              
@@ -274,15 +481,17 @@ fields:
          #`(begin
              (: fields→tree-name (∀ (field …)
                                     (→ field …
-                                       (Promise #,(τ-tree-with-fields #'(field …)
-                                                                      all-fields)))))
+                                       (Promise
+                                        #,(τ-tree-with-fields #'(field …)
+                                                              all-fields)))))
              (define (fields→tree-name field …)
                (delay/pure/stateless
                 #,(convert-fields (* offset 2) fields+indices)))
 
              (: tree→fields-name (∀ (field …)
-                                    (→ (Promise #,(τ-tree-with-fields #'(field …)
-                                                                      all-fields))
+                                    (→ (Promise
+                                        #,(τ-tree-with-fields #'(field …)
+                                                              all-fields))
                                        (Values field …))))
              (define (tree→fields-name tree-thunk)
                (define tree (force tree-thunk))
@@ -396,11 +605,14 @@ interesting subparts of the trees (those where there are fields).
        (require delay-pure
                 "flexible-with-utils.hl.rkt"
                 (for-syntax (rename-in racket/base [... …])
+                            syntax/parse
                             syntax/stx
                             racket/syntax
                             racket/list
                             syntax/id-table
-                            racket/sequence)
+                            racket/sequence
+                            racket/vector
+                            racket/contract)
                 (for-meta 2 racket/base))
 
        (provide (for-syntax define-trees)
@@ -409,7 +621,7 @@ interesting subparts of the trees (those where there are fields).
 
                 ;;DEBUG:
                 (for-syntax τ-tree-with-fields)
-                )
+                record-builder)
        
        <maybe>
        <tree-type-with-replacement>
@@ -420,6 +632,8 @@ interesting subparts of the trees (those where there are fields).
        <τ-tree-with-fields>
        <define-struct↔tree>
        <define-trees>
-       <bt-fields-type>]
+       <bt-fields-type>
+       (begin-for-syntax <idx→tree>)
+       <record-builder>]
 
 ꩜include-section[(submod "flexible-with-utils.hl.rkt" doc)]
