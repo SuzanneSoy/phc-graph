@@ -118,18 +118,9 @@ also be collapsed.
  representation), ꩜racket[idx→tree] generates tree-shaped code, transforming
  each leaf with ꩜racket[_leaf-wrapper], each intermediate node with
  ꩜racket[_node-wrapper] and each leaf not present in the initial list with
- ꩜racket[none-wrapper].
+ ꩜racket[none-wrapper].}
 
- The ꩜racket[idx→tree] is a two-step curried function, and the first step
- returns a function with the following signature:
 
- ꩜defproc[(r [#:depth depth exact-nonnegative-integer?]
-             [#:vec-bounds vec-start exact-nonnegative-integer?]
-             #|        |# [vec-after-end exact-nonnegative-integer?]
-             [#:leaf-bounds first-leaf exact-nonnegative-integer?]
-             #|         |# [after-last-leaf exact-nonnegative-integer?])
-          any/c]{}
-}
 
 ꩜chunk[<idx→tree>
        (define/contract (idx→tree #:none-wrapper none-wrapper
@@ -141,31 +132,75 @@ also be collapsed.
                     #:vec-bounds vec-start vec-after-end
                     #:leaf-bounds first-leaf after-last-leaf)
            (cond
-             [(= vec-start vec-after-end)
-              (none-wrapper depth)]
-             [(= (+ first-leaf 1) after-last-leaf)
-              (leaf-wrapper vec-start (vector-ref vec vec-start))]
-             [else
-              (let* ([leftmost-right-leaf (/ (+ first-leaf after-last-leaf) 2)]
-                     [vec-left-branch-start vec-start]
-                     [vec-left-branch-after-end
-                      (find-≥ leftmost-right-leaf vec vec-start vec-after-end)]
-                     [vec-right-branch-start vec-left-branch-after-end]
-                     [vec-right-branch-after-end vec-after-end])
-                (node-wrapper
-                 (r #:depth (sub1 depth)
-                    #:vec-bounds vec-left-branch-start
-                    #|        |# vec-left-branch-after-end
-                    #:leaf-bounds first-leaf
-                    #|         |# leftmost-right-leaf)
-                 (r #:depth (sub1 depth)
-                    #:vec-bounds vec-right-branch-start
-                    #|        |# vec-right-branch-after-end
-                    #:leaf-bounds leftmost-right-leaf
-                    #|         |# after-last-leaf)))]))
+             |<idx→tree cases>|))
          r)]
 
-꩜chunk[<idx→tree/ctc>
+The ꩜racket[idx→tree] is a two-step curried function, and the first step
+returns a function with the following signature:
+
+꩜defproc[(r [#:depth depth exact-nonnegative-integer?]
+            [#:vec-bounds vec-start exact-nonnegative-integer?]
+            #;|        | [vec-after-end exact-nonnegative-integer?]
+            [#:leaf-bounds first-leaf exact-nonnegative-integer?]
+            #;|         | [after-last-leaf exact-nonnegative-integer?])
+         any/c]{}
+
+The ꩜racket[idx→tree] function works by performing repeated dichotomy on the
+vector of present fields ꩜racket[vec].
+
+꩜hlite[|<idx→tree cases>| {-/ (cond = _ _ _)}
+       (cond
+         [(= vec-start vec-after-end)
+          (none-wrapper depth)]
+         [(= (+ first-leaf 1) after-last-leaf)
+          (leaf-wrapper vec-start (vector-ref vec vec-start))]
+         [else
+          (let* ([leftmost-right-leaf (/ (+ first-leaf after-last-leaf) 2)]
+                 [vec-left-branch-start vec-start]
+                 [vec-left-branch-after-end
+                  (find-≥ leftmost-right-leaf vec vec-start vec-after-end)]
+                 [vec-right-branch-start vec-left-branch-after-end]
+                 [vec-right-branch-after-end vec-after-end])
+            (node-wrapper
+             (r #:depth (sub1 depth)
+                #:vec-bounds vec-left-branch-start
+                #;|        | vec-left-branch-after-end
+                #:leaf-bounds first-leaf
+                #;|         | leftmost-right-leaf)
+             (r #:depth (sub1 depth)
+                #:vec-bounds vec-right-branch-start
+                #;|        | vec-right-branch-after-end
+                #:leaf-bounds leftmost-right-leaf
+                #;|         | after-last-leaf)))])]
+
+The ꩜racket[find-≥] function performs the actual dichotomy, and finds the
+first index within the given bounds for which ꩜racket[(vector-ref vec result)]
+is greater than or equal to ꩜racket[val] (if there is none, then the upper
+exclusive bound is returned).
+
+꩜chunk[<dichotomy>
+       (define/contract (find-≥ val vec start end)
+         (->i ([val exact-nonnegative-integer?]
+               [vec vector?] ;; (sorted-vectorof exact-nonnegative-integer? <)
+               [start (vec) (integer-in 0 (sub1 (vector-length vec)))]
+               [end (vec start) (integer-in (add1 start) (vector-length vec))])
+              #:pre (val vec start) (or (= start 0)
+                                        (< (vector-ref vec (sub1 start)) val))
+              #:pre (val vec end) (or (= end (vector-length vec))
+                                      (> (vector-ref vec end) val))
+              [result (start end) (integer-in start end)])
+         (if (= (- end start) 1) ;; there is only one element
+             (if (>= (vector-ref vec start) val)
+                 start
+                 end)
+             (let ()
+               (define mid (ceiling (/ (+ start end) 2)))
+               (if (>= (vector-ref vec mid) val)
+                   (find-≥ val vec start mid)
+                   (find-≥ val vec mid end)))))]
+
+꩜;TODO: use a "spoiler" to hide the contents.
+꩜chunk[#:save-as hidden:<idx→tree/ctc> <idx→tree/ctc>
        (-> #:none-wrapper (->d ([depth exact-nonnegative-integer?])
                                [result any/c])
            #:leaf-wrapper (->d ([i-in-vec exact-nonnegative-integer?]
@@ -177,14 +212,18 @@ also be collapsed.
            #:vec (vectorof exact-nonnegative-integer?)
            (-> #:depth exact-nonnegative-integer?
                #:vec-bounds exact-nonnegative-integer?
-               #|        |# exact-nonnegative-integer?
+               #;|        | exact-nonnegative-integer?
                #:leaf-bounds exact-nonnegative-integer?
-               #|         |# exact-nonnegative-integer?
+               #;|         | exact-nonnegative-integer?
                any/c))]
 
-꩜section{Creating a record builder given a set of field indices}
+꩜section{Empty branches (branches only containing missing fields)}
 
-꩜chunk[<record-builder>
+For efficiency and to reduce memory overhead, we pre-define values for
+branches of depth ꩜racket[_d ∈ (range 0 _n)] which only contain missing
+fields.
+
+꩜chunk[<empty-branches>
        ;; TODO: clean this up (use subtemplate).
        (define-syntax defempty
          (syntax-parser
@@ -206,31 +245,16 @@ also be collapsed.
                       …
                       (provide empty1 emptyA …
                                empty1/τ emptyA/τ …)))]))
-       (defempty 10)
-       
-       ;; The range is [start .. end[, that is start is part of the range,
-       ;; but end is not.
-       ;; Returns a value in the range start .. end (if end is returned, then
-       ;; it means that all elements in the range (which excludes end) are
-       ;; greater than val).
-       (define-for-syntax (find-≥ val vec start end)
-         ;; TODO: assert that vec[start] < val (actually: it's not the case)
-         ;; TODO: assert that vec[end] ≥ val
-         (define n-elements (- end start))
-         (if (= n-elements 1)  ;; there is only one element
-             (if (>= (vector-ref vec start) val)
-                 start
-                 end)
-             (let ()
-               (define mid (ceiling (/ (+ start end) 2)))
-               (if (>= (vector-ref vec mid) val)
-                   (find-≥ val vec start mid)
-                   (find-≥ val vec mid end)))))
+       (defempty 10)]
+
+꩜section{Creating a record builder given a set of field indices}
+
+꩜chunk[<record-builder>
        (define-syntax record-builder
          (syntax-parser
            ;; depth ≥ 0. 0 ⇒ a single node, 1 ⇒ 2 nodes, 2 ⇒ 4 nodes and so on.
            [(_ depth:nat idx:nat …)
-            ;; TODO: check that the IDs are unique.
+            #:when (not (check-duplicates (syntax->datum #'(idx …))))
             (define vec (list->vector (sort (syntax->datum #'(idx …)) <)))
             (define arg-vec (vector-map (λ (idx)
                                           (format-id #;TODO:FIXME: (syntax-local-introduce #'here)
@@ -259,6 +283,110 @@ also be collapsed.
         #:vec vec)]
 
 ꩜section{Type of a record, with a multiple holes}
+
+꩜; TODO: this is near identical to record-builder, refactor.
+꩜chunk[<record-type>
+       (define-type-expander record-type
+         (syntax-parser
+           [(_ depth:nat idx:nat …)
+            #:when (not (check-duplicates (syntax->datum #'(idx …))))
+            (define vec (list->vector (sort (syntax->datum #'(idx …)) <)))
+            (define arg-vec (vector-map (λ (idx)
+                                          (format-id #;TODO:FIXME: (syntax-local-introduce #'here)
+                                                     "arg~a"
+                                                     idx))
+                                        vec))
+            (define/with-syntax #(arg …) arg-vec)
+            (define sidekicks-len 0)
+            (define sidekicks '())
+            (define/with-syntax tree
+              ((idx→tree <record-type/wrappers>
+                         #:vec vec)
+               #:depth (syntax-e #'depth)
+               #:vec-bounds 0 (vector-length vec)
+               #:leaf-bounds 0 (expt 2 (syntax-e #'depth))))
+            #`(∀ (arg … #,@sidekicks) tree)]))]
+
+꩜hlite[<record-type/wrappers> {-/ (_ = _ _ _ _ _ _ _ _ _ -/ _ vec)}
+       (idx→tree
+        #:none-wrapper λdepth.(begin
+                                (define sidekick (format-id #'here "row~a" sidekicks-len))
+                                (set! sidekicks-len (add1 sidekicks-len))
+                                (set! sidekicks (cons sidekick sidekicks))
+                                sidekick)
+        #:leaf-wrapper λi.idx.(vector-ref arg-vec i)
+        #:node-wrapper λl.r.(list #'Pairof l r)
+        #:vec vec)]
+
+꩜chunk[<record-type>
+       (begin-for-syntax
+         (struct ρ-wrapper (id)
+           #:property prop:procedure
+           (λ (stx)
+             (raise-syntax-error
+              (if (and (stx-pair? stx) (identifier? (stx-car stx)))
+                  (syntax-e (stx-car stx))
+                  'ρ)
+              "invalid use of row type variable"
+              stx))))
+       (define-syntax with-ρ
+         (syntax-parser
+           [(_ (ρ …) . body)
+            #'(splicing-letrec-syntax ([ρ (ρ-wrapper #'ρ)]
+                              …)
+                . body)]))
+       
+       (define-for-syntax ρ-table (make-free-id-table))
+       (define-type-expander ∀ρ
+         (syntax-parser
+           [(_ (A:id … #:ρ ρ:id …) τ)
+            (for ([ρ (in-syntax #'(ρ …))])
+              (free-id-table-set! ρ-table ρ <make-lifo-set>))
+            (define expanded (expand-type #'(∀ (A …)
+                                               (Let ([ρ (Pairof 'Hello 'ρ)]
+                                                     …)
+                                                 τ))))
+            (define/syntax-parse ({~literal tr:∀} (A′ …) . τ′) expanded)
+            ;; TODO: do this in the delayed part, after the whole program has
+            ;; been expanded, so that we can know which fields ρ is used with.
+            (define/syntax-parse (ρ′ …)
+              (remove-duplicates
+               (append* (for/list ([ρ (in-syntax #'(ρ …))])
+                          (<lifo-set→list> (free-id-table-ref ρ-table ρ))))))
+            (displayln #'(tr:∀ (A′ …) . τ′))
+            (lift-delayed-module-end-declaration
+             #'(define-type delayed-type
+                 (∀ (A′ … ρ′ …) . τ′)))
+            #'delayed-type]))
+
+       (define-type-expander record
+         (syntax-parser
+           [(_ f:id … . {~or (#:ρ ρ:id) ρ:id})
+            (define set
+              (free-id-table-ref! ρ-table #'ρ (λ () <make-lifo-set>)))
+            (for ([f (in-syntax #'(f …))])
+              (<lifo-set-add!> set (syntax->datum f)))
+            #'(List 'f … 'ρ)]))
+
+       (define-syntax ρ-inst
+         (syntax-parser
+           [(_ f A:id … #:ρ ρ:id …)
+            #'TODO]))]
+
+꩜chunk[<make-lifo-set>
+       ;; ordered free-identifier-set, last added = first in the order.
+       (cons (box '()) (mutable-set))]
+
+꩜chunk[<lifo-member?>
+       (λ (s v) (set-member? (cdr s) v))]
+
+꩜chunk[<lifo-set-add!>
+       (λ (s v)
+         (set-box! (car s) (cons v (unbox (car s))))
+         (set-add! (cdr s) v))]
+
+꩜chunk[<lifo-set→list>
+       (λ (s) (unbox (car s)))]
 
 ꩜section{Type of a record, with a single hole}
 
@@ -610,10 +738,15 @@ interesting subparts of the trees (those where there are fields).
                             racket/syntax
                             racket/list
                             syntax/id-table
+                            racket/set
                             racket/sequence
                             racket/vector
-                            racket/contract)
-                (for-meta 2 racket/base))
+                            racket/contract
+                            type-expander/expander)
+                (for-meta 2 racket/base)
+                (only-in phc-graph/xtyped lift-delayed-module-end-declaration)
+                (prefix-in tr: (only-in typed/racket ∀))
+                racket/splicing)
 
        (provide (for-syntax define-trees)
                 ;; For tests:
@@ -621,7 +754,10 @@ interesting subparts of the trees (those where there are fields).
 
                 ;;DEBUG:
                 (for-syntax τ-tree-with-fields)
-                record-builder)
+                record-builder
+                ∀ρ
+                with-ρ
+                record)
        
        <maybe>
        <tree-type-with-replacement>
@@ -633,7 +769,11 @@ interesting subparts of the trees (those where there are fields).
        <define-struct↔tree>
        <define-trees>
        <bt-fields-type>
-       (begin-for-syntax <idx→tree>)
-       <record-builder>]
+       (begin-for-syntax
+         <dichotomy>
+         <idx→tree>)
+       <empty-branches>
+       <record-builder>
+       <record-type>]
 
 ꩜include-section[(submod "flexible-with-utils.hl.rkt" doc)]
