@@ -1,6 +1,35 @@
-#lang hyper-literate #:꩜ (dotlambda/unhygienic . type-expander/lang)
+#lang hyper-literate #:꩜ #:no-auto-require (dotlambda/unhygienic
+                                            . type-expander/lang)
 
-꩜title[#:style manual-doc-style ;#:style (with-html5 manual-doc-style)
+꩜require[scriblib/footnote
+         scriblib/figure
+         hyper-literate/diff1
+         hyper-literate/spoiler1
+         racket/runtime-path
+         scribble-math
+         (for-label delay-pure
+                    "flexible-with-utils.hl.rkt"
+                    phc-toolkit/syntax-parse
+                    (rename-in racket/base [... …])
+                    syntax/parse
+                    syntax/stx
+                    racket/syntax
+                    racket/list
+                    syntax/id-table
+                    racket/set
+                    racket/sequence
+                    racket/vector
+                    racket/contract
+                    type-expander/expander
+                    ;phc-toolkit/untyped/syntax-parse
+                    racket/base
+                    (prefix-in tr: (only-in typed/racket ∀))
+                    racket/splicing)]
+
+꩜require[scribble/core
+         scribble/html-properties]
+
+꩜title[#:style (with-html5 manual-doc-style)
        #:tag "flexible-with"
        #:tag-prefix "phc-graph/flexible-with"]{Flexible functional
  modification and extension of records}
@@ -9,13 +38,6 @@
   '("(lib phc-graph/scribblings/phc-graph-implementation.scrbl)"
     "phc-graph/flexible-with"))
 
-꩜require[scriblib/footnote
-         scriblib/figure
-         hyper-literate/diff1
-         racket/runtime-path]
-
-꩜require[scribble/core
-         scribble/html-properties]
 ꩜elem[#:style (style #f (list (css-addition
                                #"
 .Figure,
@@ -120,8 +142,6 @@ also be collapsed.
  ꩜racket[_node-wrapper] and each leaf not present in the initial list with
  ꩜racket[none-wrapper].}
 
-
-
 ꩜chunk[<idx→tree>
        (define/contract (idx→tree #:none-wrapper none-wrapper
                                   #:leaf-wrapper leaf-wrapper
@@ -134,6 +154,26 @@ also be collapsed.
            (cond
              |<idx→tree cases>|))
          r)]
+
+꩜spler[<idx→tree/ctc>
+       (code:comment "; contract for idx→tree, as specified above")
+       #:expanded
+       (code:comment "; contract for idx→tree, as specified above")
+       (-> #:none-wrapper (->d ([depth exact-nonnegative-integer?])
+                               [result any/c])
+           #:leaf-wrapper (->d ([i-in-vec exact-nonnegative-integer?]
+                                [leaf-idx exact-nonnegative-integer?])
+                               any)
+           #:node-wrapper (->d ([left any/c]
+                                [right any/c])
+                               any)
+           #:vec (vectorof exact-nonnegative-integer?)
+           (-> #:depth exact-nonnegative-integer?
+               #:vec-bounds exact-nonnegative-integer?
+               #;|        | exact-nonnegative-integer?
+               #:leaf-bounds exact-nonnegative-integer?
+               #;|         | exact-nonnegative-integer?
+               any/c))]
 
 The ꩜racket[idx→tree] is a two-step curried function, and the first step
 returns a function with the following signature:
@@ -199,24 +239,6 @@ exclusive bound is returned).
                    (find-≥ val vec start mid)
                    (find-≥ val vec mid end)))))]
 
-꩜;TODO: use a "spoiler" to hide the contents.
-꩜chunk[#:save-as hidden:<idx→tree/ctc> <idx→tree/ctc>
-       (-> #:none-wrapper (->d ([depth exact-nonnegative-integer?])
-                               [result any/c])
-           #:leaf-wrapper (->d ([i-in-vec exact-nonnegative-integer?]
-                                [leaf-idx exact-nonnegative-integer?])
-                               any)
-           #:node-wrapper (->d ([left any/c]
-                                [right any/c])
-                               any)
-           #:vec (vectorof exact-nonnegative-integer?)
-           (-> #:depth exact-nonnegative-integer?
-               #:vec-bounds exact-nonnegative-integer?
-               #;|        | exact-nonnegative-integer?
-               #:leaf-bounds exact-nonnegative-integer?
-               #;|         | exact-nonnegative-integer?
-               any/c))]
-
 ꩜section{Empty branches (branches only containing missing fields)}
 
 For efficiency and to reduce memory overhead, we pre-define values for
@@ -262,9 +284,6 @@ fields.
                                                      idx))
                                         vec))
             (define/with-syntax #(arg …) arg-vec)
-            (define/with-syntax (arg/τ …) (stx-map (λ (arg)
-                                                     (format-id arg "~a/τ" arg))
-                                                   #'(arg …)))
             
             (define/with-syntax tree
               ((idx→tree <record-builder/wrappers>
@@ -272,6 +291,9 @@ fields.
                #:depth (syntax-e #'depth)
                #:vec-bounds 0 (vector-length vec)
                #:leaf-bounds 0 (expt 2 (syntax-e #'depth))))
+            (define/with-syntax (arg/τ …) (stx-map (λ (arg)
+                                                     (format-id arg "~a/τ" arg))
+                                                   #'(arg …)))
             #'(λ #:∀ (arg/τ …) ([arg : arg/τ] …)
                 tree)]))]
 
@@ -284,8 +306,88 @@ fields.
 
 ꩜section{Type of a record, with a multiple holes}
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Identifiers which are bound as row type variables are bound as transformers to
+instances of the ꩜racket[ρ-wrapper] struct, so that they are easily
+recognizable by special forms such as ꩜racket[record].
+
+꩜spler[<ρ-wrapper>
+       (begin-for-syntax
+         (struct ρ-wrapper (id)))
+       #:expanded
+       (begin-for-syntax
+         (struct ρ-wrapper (id)
+           #:property prop:procedure
+           (λ (self stx)
+             (raise-syntax-error (syntax-e (ρ-wrapper-id self))
+                                 "invalid use of row type variable"
+                                 stx))))]
+
+The row type variable actually expands to several polymorphic type variables.
+In order to know which, we remember which fields are used along a given row
+type variable, while compiling the current file. The set of field names used
+with a given row types variable is stored as an entry of the ꩜racket[ρ-table].
+
+꩜chunk[<ρ-table>
+       (define-for-syntax ρ-table (make-free-id-table))]
+
+A record type which includes a row type variable is expanded to the type of a
+binary tree. Fields which are used along that row type variable matter, and
+must be explicitly indicated as optional leaves (so that operations which add
+or remove fields later in the body of a row-polymorphic function may refer to
+that leaf). Branches which only contain irrelevant leaves can be collapsed to
+a single polymorphic type. The core implementation of record types (in which
+the depth of the tree is explicitly given, and ) follows. Since the code is
+very similar to the defintion of ꩜racket[idx→tree], the unchanged parts are
+dimmed below.
+
 ꩜; TODO: this is near identical to record-builder, refactor.
-꩜chunk[<record-type>
+꩜hlite[<record-type>
+       {(dte rt / (sp [sig when dup vec arg-vec arg
+                       (d/ws tree (= idx→tree / a b c d e f g h)) = _ _ _]))}
        (define-type-expander record-type
          (syntax-parser
            [(_ depth:nat idx:nat …)
@@ -297,15 +399,21 @@ fields.
                                                      idx))
                                         vec))
             (define/with-syntax #(arg …) arg-vec)
-            (define sidekicks-len 0)
-            (define sidekicks '())
+            
             (define/with-syntax tree
               ((idx→tree <record-type/wrappers>
                          #:vec vec)
                #:depth (syntax-e #'depth)
                #:vec-bounds 0 (vector-length vec)
                #:leaf-bounds 0 (expt 2 (syntax-e #'depth))))
+            (define sidekicks-len 0)
+            (define sidekicks '())
             #`(∀ (arg … #,@sidekicks) tree)]))]
+
+Aside from the kind of result (which is a polymorphic type, not a function),
+the main difference with ꩜racket[idx→tree] is how the empty branches are
+handled. When a branch only containing ꩜racket[none] elements is encountered,
+it is replaced with a single polymorphic type.
 
 ꩜hlite[<record-type/wrappers> {-/ (_ = _ _ _ _ _ _ _ _ _ -/ _ vec)}
        (idx→tree
@@ -318,25 +426,33 @@ fields.
         #:node-wrapper λl.r.(list #'Pairof l r)
         #:vec vec)]
 
+Since the list of fields may be amended long after the type was initially
+expanded, we delay the expansion of the type. This is done by initially
+expanding to a placeholder type name, and later patching the expanded code to
+replace that placeholder with the actual expanded record type.
+꩜racket[current-patch-table] maps each placeholder to an anonymous function
+which will produce the syntax for the desired type when called.
+
+꩜chunk[<current-patch-table>
+       (define-for-syntax current-patch-table (make-parameter #f))]
+
 ꩜chunk[<record-type>
-       (begin-for-syntax
-         (struct ρ-wrapper (id)
-           #:property prop:procedure
-           (λ (stx)
-             (raise-syntax-error
-              (if (and (stx-pair? stx) (identifier? (stx-car stx)))
-                  (syntax-e (stx-car stx))
-                  'ρ)
-              "invalid use of row type variable"
-              stx))))
+       <ρ-wrapper>
+       <current-patch-table>
+       (define-syntax with-ρ-chain
+         (syntax-parser
+           [(_ (ρ …) . body)
+            (parameterize ([current-patch-table (make-free-id-table)])
+              (define expanded-form
+                (local-expand #'(begin . body) 'top-level '()))
+              (patch expanded-form (current-patch-table)))]))
        (define-syntax with-ρ
          (syntax-parser
            [(_ (ρ …) . body)
-            #'(splicing-letrec-syntax ([ρ (ρ-wrapper #'ρ)]
-                              …)
-                . body)]))
+            #'(splicing-letrec-syntax ([ρ (ρ-wrapper #'ρ)] …)
+                (with-ρ-chain (ρ …) . body))]))
        
-       (define-for-syntax ρ-table (make-free-id-table))
+       <ρ-table>
        (define-type-expander ∀ρ
          (syntax-parser
            [(_ (A:id … #:ρ ρ:id …) τ)
@@ -347,17 +463,23 @@ fields.
                                                      …)
                                                  τ))))
             (define/syntax-parse ({~literal tr:∀} (A′ …) . τ′) expanded)
-            ;; TODO: do this in the delayed part, after the whole program has
-            ;; been expanded, so that we can know which fields ρ is used with.
-            (define/syntax-parse (ρ′ …)
-              (remove-duplicates
-               (append* (for/list ([ρ (in-syntax #'(ρ …))])
-                          (<lifo-set→list> (free-id-table-ref ρ-table ρ))))))
-            (displayln #'(tr:∀ (A′ …) . τ′))
-            (lift-delayed-module-end-declaration
-             #'(define-type delayed-type
-                 (∀ (A′ … ρ′ …) . τ′)))
+            (free-id-table-set! (current-patch-table)
+                                #'delayed-type
+                                (λ (self)
+                                  (delayed-∀ρ #'{(A′ …) (ρ …) τ′})))
             #'delayed-type]))
+
+       (define-for-syntax/case-args (delayed-∀ρ {(A′ …) (ρ …) τ′})
+         (define/syntax-parse ((ρ′ …) …)
+           (for/list ([ρ (in-syntax #'(ρ …))])
+             (for/list ([ρ′ (sort (<lifo-set→list> (free-id-table-ref ρ-table
+                                                                      ρ))
+                                  symbol<?)])
+               ;; TODO: the format-id shouldn't be here, it should be when
+               ;; the id is added to the list. Also #'here is probably the
+               ;; wrong srcloc
+               (format-id #'here "~a.~a" ρ ρ′))))
+         #'(∀ (A′ … ρ′ … …) . τ′))
 
        (define-type-expander record
          (syntax-parser
@@ -382,11 +504,101 @@ fields.
 
 ꩜chunk[<lifo-set-add!>
        (λ (s v)
-         (set-box! (car s) (cons v (unbox (car s))))
+         (unless (<lifo-member?> s v)
+           (set-box! (car s) (cons v (unbox (car s)))))
          (set-add! (cdr s) v))]
 
 ꩜chunk[<lifo-set→list>
        (λ (s) (unbox (car s)))]
+
+꩜chunk[<patch>
+       (define-for-syntax (patch e tbl)
+         (define (patch* e)
+           (cond
+             ;[(syntax-case e ()
+             ;   [(x y)
+             ;    (free-id-table-ref tbl x (λ () #f))
+             ;    (values #t ((free-id-table-ref tbl x) e))]
+             ;   [_ #f])]
+             [(and (identifier? e)
+                   (free-id-table-ref tbl e (λ () #f)))
+              => (λ (f) (values #t (f e)))]
+             [(syntax? e)
+              (let-values ([(a b) (patch* (syntax-e e))])
+                (if a
+                    (values a (datum->syntax e b e e))
+                    (values a e)))]
+             [(pair? e)
+              (let-values ([(a1 b1) (patch* (car e))]
+                           [(a2 b2) (patch* (cdr e))])
+                (if (or a1 a2)
+                    (values #t (cons b1 b2))
+                    (values #f e)))]
+             ;; TODO: hash, prefab etc.
+             [else
+              (values #f e)]))
+         (let-values ([(a b) (patch* e)])
+           b))]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+꩜chunk[<expand-ρ>
+       (define-for-syntax identifier<? (∘ symbol<? syntax-e))
+       (define-for-syntax (sort-ids ids) (sort (syntax->list ids) identifier<?))
+       (define-type-expander ρ/fields
+         (syntax-parser
+           [(_ (important-field …) (all-field …))
+            #:with (sorted-important-field …) (sort-ids #'(important-field …))
+            #:with (sorted-all-field …) (sort-ids #'(all-field …))
+            
+            #'~]))]
+
+꩜; TODO: build the expansion of ρ by determining which are the dangling branches
+꩜;       for a given set of fields.
+꩜; TODO: use the expansion of ρ in the generated ∀
+꩜; TODO: write the "record" type (tree with the desired leaves + dangling branches
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ꩜section{Type of a record, with a single hole}
 
@@ -574,7 +786,6 @@ fields:
 
          ;; Like in convert-fields, but with Pairof
          (define (f i)
-           ;(displayln (list i '/ up (syntax->datum #`#,fields+indices)))
            (if (and (pair? fields+indices) (= i (cdar fields+indices)))
                (begin0
                  `(Some ,(caar fields+indices))
@@ -629,9 +840,7 @@ fields:
 
 ꩜CHUNK[<convert-fields>
        (define-for-syntax (convert-fields up fields+indices)
-         ;(displayln fields+indices)
          (define (f i)
-           ;(displayln (list i '/ up (syntax->datum #`#,fields+indices)))
            (if (and (pair? fields+indices) (= i (cdar fields+indices)))
                (begin0
                  `(Some ,(caar fields+indices))
@@ -640,7 +849,6 @@ fields:
                    ''NONE
                    `(cons ,(f (* i 2))
                           ,(f (add1 (* i 2)))))))
-         ;(displayln (syntax->datum #`#,(f 1)))
          (f 1))]
 
 
@@ -732,6 +940,7 @@ interesting subparts of the trees (those where there are fields).
 ꩜chunk[<*>
        (require delay-pure
                 "flexible-with-utils.hl.rkt"
+                phc-toolkit/syntax-parse
                 (for-syntax (rename-in racket/base [... …])
                             syntax/parse
                             syntax/stx
@@ -742,9 +951,9 @@ interesting subparts of the trees (those where there are fields).
                             racket/sequence
                             racket/vector
                             racket/contract
-                            type-expander/expander)
+                            type-expander/expander
+                            phc-toolkit/untyped/syntax-parse)
                 (for-meta 2 racket/base)
-                (only-in phc-graph/xtyped lift-delayed-module-end-declaration)
                 (prefix-in tr: (only-in typed/racket ∀))
                 racket/splicing)
 
@@ -774,6 +983,7 @@ interesting subparts of the trees (those where there are fields).
          <idx→tree>)
        <empty-branches>
        <record-builder>
+       <patch>
        <record-type>]
 
 ꩜include-section[(submod "flexible-with-utils.hl.rkt" doc)]
