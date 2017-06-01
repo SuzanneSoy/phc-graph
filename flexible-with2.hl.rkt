@@ -304,7 +304,6 @@ fields.
         #:node-wrapper λl.r.(list #'cons l r)
         #:vec vec)]
 
-꩜section{Type of a record, with a multiple holes}
 
 
 
@@ -349,10 +348,11 @@ fields.
 
 
 
+꩜section{Row typing}
 
-Identifiers which are bound as row type variables are bound as transformers to
-instances of the ꩜racket[ρ-wrapper] struct, so that they are easily
-recognizable by special forms such as ꩜racket[record].
+Row type variable identifiers are bound as transformers to instances of the
+꩜racket[ρ-wrapper] struct, so that they are easily recognisable by special
+forms such as ꩜racket[record].
 
 ꩜spler[<ρ-wrapper>
        (begin-for-syntax
@@ -367,9 +367,10 @@ recognizable by special forms such as ꩜racket[record].
                                  stx))))]
 
 The row type variable actually expands to several polymorphic type variables.
-In order to know which, we remember which fields are used along a given row
-type variable, while compiling the current file. The set of field names used
-with a given row types variable is stored as an entry of the ꩜racket[ρ-table].
+In order to know which fields are relevant, we remember which fields are used
+along a given row type variable, while compiling the current file. The set of
+field names used with a given row types variable is stored as an entry of the
+꩜racket[ρ-table].
 
 ꩜chunk[<ρ-table>
        (define-for-syntax ρ-table (make-free-id-table))]
@@ -410,10 +411,11 @@ dimmed below.
             (define sidekicks '())
             #`(∀ (arg … #,@sidekicks) tree)]))]
 
-Aside from the kind of result (which is a polymorphic type, not a function),
-the main difference with ꩜racket[idx→tree] is how the empty branches are
-handled. When a branch only containing ꩜racket[none] elements is encountered,
-it is replaced with a single polymorphic type.
+The results of ꩜racket[record-type] and ꩜racket[record-builder] differ in two
+aspects: the result of ꩜racket[record-type] is a polymorphic type, not a
+function, and the empty branches are handled differently. When a branch only
+containing ꩜racket[none] elements is encountered, it is replaced with a single
+polymorphic type.
 
 ꩜hlite[<record-type/wrappers> {-/ (_ = _ _ _ _ _ _ _ _ _ -/ _ vec)}
        (idx→tree
@@ -436,39 +438,65 @@ which will produce the syntax for the desired type when called.
 ꩜chunk[<current-patch-table>
        (define-for-syntax current-patch-table (make-parameter #f))]
 
-꩜chunk[<record-type>
-       <ρ-wrapper>
-       <current-patch-table>
+Type-level forms like ꩜racket[∀ρ], ꩜racket[ρ-inst] and ꩜racket[record] add
+placeholders to ꩜racket[current-patch-table].
+
+The form ꩜racket[with-ρ] is used to declare row type variables and collect
+patches in ꩜racket[current-patch-table]. The explicit declaration of row type
+variables is necessary because type variables which are logically ``bound''
+with ꩜racket[∀] are not actually bound as identifiers during macro expansion
+(instead, Typed Racket performs its own resolution while typechecking, i.e.
+after the program is expanded). If a row type variable is introduced in the
+type declaration for a function, we need to be able to detect the binding when
+processing type-level forms within the body of the function.
+
+꩜chunk[<with-ρ>
+       (define-syntax with-ρ
+         (syntax-parser
+           [(_ (ρ …) . body)
+            #'(splicing-letrec-syntax ([ρ (ρ-wrapper #'ρ)] …)
+                (with-ρ-chain (ρ …) . body))]))]
+
+Once the bindings have been introduced via ꩜racket[splicing-letrec-syntax],
+the expansion continues within the context of these identifiers, via the
+꩜racket[with-ρ-chain] macro.
+
+꩜chunk[<with-ρ-chain>
        (define-syntax with-ρ-chain
          (syntax-parser
            [(_ (ρ …) . body)
             (parameterize ([current-patch-table (make-free-id-table)])
               (define expanded-form
                 (local-expand #'(begin . body) 'top-level '()))
-              (patch expanded-form (current-patch-table)))]))
-       (define-syntax with-ρ
-         (syntax-parser
-           [(_ (ρ …) . body)
-            #'(splicing-letrec-syntax ([ρ (ρ-wrapper #'ρ)] …)
-                (with-ρ-chain (ρ …) . body))]))
-       
-       <ρ-table>
+              (patch expanded-form (current-patch-table)))]))]
+
+꩜subsection{Type of a record, with a multiple fields}
+
+The ꩜racket[∀ρ] type-level form translates to a ꩜racket[∀] form. The
+꩜racket[∀] form is expanded, so that uses of the row type variables within can
+be detected. The ꩜racket[∀ρ] then expands to a placeholder
+꩜racket[delayed-type], which will be patched by the surrounding
+꩜racket[with-ρ].
+
+꩜;TODO: use a table to track the pre-declared collapsed-branch types?
+꩜chunk[<∀ρ>
        (define-type-expander ∀ρ
          (syntax-parser
            [(_ (A:id … #:ρ ρ:id …) τ)
             (for ([ρ (in-syntax #'(ρ …))])
               (free-id-table-set! ρ-table ρ <make-lifo-set>))
-            (define expanded (expand-type #'(∀ (A …)
-                                               (Let ([ρ (Pairof 'Hello 'ρ)]
-                                                     …)
-                                                 τ))))
+            (define expanded (expand-type #'(∀ (A …) (Let ([ρ 'NOT-IMPL-YET] …) τ))))
             (define/syntax-parse ({~literal tr:∀} (A′ …) . τ′) expanded)
             (free-id-table-set! (current-patch-table)
                                 #'delayed-type
-                                (λ (self)
-                                  (delayed-∀ρ #'{(A′ …) (ρ …) τ′})))
-            #'delayed-type]))
+                                (λ (self) (delayed-∀ρ #'{(A′ …) (ρ …) τ′})))
+            #'delayed-type]))]
 
+When the ꩜racket[delayed-type] is replaced, the type variables associated with
+each row type variable are injected as extra arguments to the
+previously-expanded polymorphic type.
+
+꩜chunk[<delayed-∀ρ>
        (define-for-syntax/case-args (delayed-∀ρ {(A′ …) (ρ …) τ′})
          (define/syntax-parse ((ρ′ …) …)
            (for/list ([ρ (in-syntax #'(ρ …))])
@@ -479,7 +507,21 @@ which will produce the syntax for the desired type when called.
                ;; the id is added to the list. Also #'here is probably the
                ;; wrong srcloc
                (format-id #'here "~a.~a" ρ ρ′))))
-         #'(∀ (A′ … ρ′ … …) . τ′))
+         #'(∀ (A′ … ρ′ … …) . τ′))]
+
+
+
+꩜chunk[<record-type>
+       <ρ-wrapper>
+       <current-patch-table>
+       
+       <with-ρ-chain>
+       <with-ρ>
+       
+       <ρ-table>
+       <∀ρ>
+
+       <delayed-∀ρ>
 
        (define-type-expander record
          (syntax-parser
