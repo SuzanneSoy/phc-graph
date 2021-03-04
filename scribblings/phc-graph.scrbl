@@ -3,7 +3,7 @@
                     racket/base]]
 
 @title{Ph.C Graph library}
-@author[@author+email["Georges Dupéron" "georges.duperon@gmail.com"]]
+@author[@author+email["Suzanne Soy" "racket@suzanne.soy"]]
 
 This library is implmented using literate programming. The
 implementation details are presented in 

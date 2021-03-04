@@ -3,7 +3,7 @@
                     racket/base]]
 
 @title{Ph.C Graph library: Implementation}
-@author[@author+email["Georges Dupéron" "georges.duperon@gmail.com"]]
+@author[@author+email["Suzanne Soy" "racket@suzanne.soy"]]
 
 This library is implemented using literate programming. The implementation
 details are presented in the following sections. The user documentation is in
